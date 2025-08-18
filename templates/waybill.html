@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Накладная {{.ID}}</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 30px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .title { font-size: 24px; font-weight: bold; }
+        .subtitle { color: #555; margin-top: 5px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f5f5f5; }
+        .footer { margin-top: 30px; font-size: 14px; color: #777; }
+        .badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+        .status-new { background: #e8f5e8; color: #27ae60; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">FastAlmaty</div>
+        <div class="subtitle">Накладная на доставку</div>
+    </div>
+
+    <p><strong>ID заказа:</strong> {{.ID}}</p>
+    <p><strong>Дата:</strong> {{.CreatedAt}}</p>
+
+    <h3>Отправитель</h3>
+    <table>
+        <tr><th>Имя</th><td>{{.SenderName}}</td></tr>
+        <tr><th>Телефон</th><td>{{.SenderPhone}}</td></tr>
+        <tr><th>Адрес</th><td>{{.SenderAddress}}</td></tr>
+    </table>
+
+    <h3>Получатель</h3>
+    <table>
+        <tr><th>Имя</th><td>{{.ReceiverName}}</td></tr>
+        <tr><th>Телефон</th><td>{{.ReceiverPhone}}</td></tr>
+        <tr><th>Адрес</th><td>{{.ReceiverAddress}}</td></tr>
+    </table>
+
+    <h3>Товар</h3>
+    <table>
+        <tr><th>Описание</th><td>{{.Description}}</td></tr>
+        <tr><th>Вес</th><td>{{.WeightKg}} кг</td></tr>
+        <tr><th>Объем</th><td>{{.VolumeL}} л</td></tr>
+        <tr><th>Стоимость</th><td>{{.DeliveryCostTenge}} ₸</td></tr>
+        <tr><th>Оплата</th><td>{{.PaymentMethod}}</td></tr>
+        <tr><th>Статус</th><td><span class="badge status-new">{{.Status}}</span></td></tr>
+    </table>
+
+    <div class="footer">
+        <p>Подпись: ____________________</p>
+        <p>© FastAlmaty — Логистическая платформа</p>
+    </div>
+</body>
+</html>
