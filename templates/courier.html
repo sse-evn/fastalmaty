@@ -1,0 +1,25 @@
+<!-- templates/courier.html -->
+<div id="courier" class="page">
+    <div class="page-header">
+        <h1 class="page-title">🚴 Курьер</h1>
+        <button class="btn btn-primary" onclick="showPage('dashboard')">← Назад</button>
+    </div>
+    <div class="orders-section">
+        <div class="section-header">
+            <h2 class="section-title">Заказы в пути</h2>
+            <button class="btn btn-success" onclick="loadCourierOrders()">🔄</button>
+        </div>
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Клиент</th>
+                    <th>Адрес</th>
+                    <th>Статус</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody id="courier-orders"></tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,21 @@
+<!-- templates/clients.html -->
+<div id="clients" class="page">
+    <div class="page-header">
+        <h1 class="page-title">🧑‍💼 CRM Клиенты</h1>
+        <button class="btn btn-primary" onclick="showPage('dashboard')">← Назад</button>
+    </div>
+    <div class="orders-section">
+        <input type="text" placeholder="Поиск по телефону..." class="form-input" id="client-search" oninput="searchClient()">
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Имя</th>
+                    <th>Телефон</th>
+                    <th>Адрес</th>
+                    <th>Заказов</th>
+                </tr>
+            </thead>
+            <tbody id="clients-list"></tbody>
+        </table>
+    </div>
+</div>

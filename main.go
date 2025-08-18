@@ -1,3 +1,5 @@
+// main.go
+
 package main
 
 import (
@@ -7,7 +9,9 @@ import (
 	"fastalmaty/middleware"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -17,14 +21,13 @@ import (
 )
 
 func loadConfig() config.Config {
-	// Загружаем .env (если файл есть)
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️  Файл .env не найден, используем значения по умолчанию")
 	}
 
 	secret := os.Getenv("SECRET_KEY")
 	if secret == "" {
-		secret = "your-secret-key-123" // только для разработки!
+		secret = "3b46329cb9c422a0fe6a8d39dbb0abbef85e974eb4198a5cd4ba8189e0c3f828"
 		log.Println("⚠️  SECRET_KEY не задан — используем небезопасный ключ!")
 	}
 
@@ -46,22 +49,24 @@ func loadConfig() config.Config {
 }
 
 func main() {
-	// Загружаем конфигурацию
 	cfg := loadConfig()
 
-	// Устанавливаем режим Gin
 	ginMode := os.Getenv("GIN_MODE")
 	if ginMode == "" {
 		ginMode = "debug"
 	}
 	gin.SetMode(ginMode)
 
-	// Инициализация базы данных
 	db.Init(cfg.DbPath)
 	defer db.Close()
 
-	// Создание роутера
 	router := gin.Default()
+
+	// ✅ Исправлено: один раз 127.0.0.1
+	err := router.SetTrustedProxies([]string{"127.0.0.1"})
+	if err != nil {
+		log.Fatal("❌ Ошибка настройки доверенных прокси:", err)
+	}
 
 	// Сессии
 	store := cookie.NewStore([]byte(cfg.SecretKey))
@@ -69,13 +74,24 @@ func main() {
 		Path:     "/",
 		MaxAge:   86400,
 		HttpOnly: true,
-		Secure:   false, // Включите true при использовании HTTPS
+		Secure:   false,
 	})
 	router.Use(sessions.Sessions("fastalmaty_session", store))
 
-	// Шаблоны и статика
+	// Статика и шаблоны
 	router.LoadHTMLGlob("templates/*.html")
 	router.Use(static.Serve("/static", static.LocalFile("./static", false)))
+
+	// Роутинг для динамических шаблонов
+	router.GET("/templates/:page", func(c *gin.Context) {
+		page := c.Param("page")
+		filePath := filepath.Join("templates", page)
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Page not found"})
+			return
+		}
+		c.File(filePath)
+	})
 
 	// API маршруты
 	api := router.Group("/api")
@@ -93,16 +109,23 @@ func main() {
 		api.POST("/settings", middleware.AuthRequired(), handlers.SaveSettingsHandler)
 		api.GET("/waybill/:id", middleware.AuthRequired(), handlers.WaybillHandler)
 		api.POST("/orders/bulk", middleware.AuthRequired(), handlers.BulkUploadHandler)
+
+		// ✅ Админ
+		api.GET("/admin/users", middleware.AuthRequired(), handlers.GetUsersHandler)
+		api.POST("/admin/users", middleware.AuthRequired(), handlers.CreateUserHandler)
+		api.DELETE("/admin/users/:id", middleware.AuthRequired(), handlers.DeleteUserHandler)
+
+		api.GET("/admin/api-keys", middleware.AuthRequired(), handlers.GetApiKeysHandler)
+		api.POST("/admin/generate-api-key", middleware.AuthRequired(), handlers.GenerateApiKeyHandler)
+		api.DELETE("/admin/revoke-api-key", middleware.AuthRequired(), handlers.RevokeApiKeyHandler)
 	}
 
 	// HTML страницы
 	router.GET("/", middleware.AuthRequired(), handlers.IndexHandler)
 	router.GET("/login", handlers.LoginPageHandler)
 
-	// Красивый старт
 	printStartupBanner(cfg)
 
-	// Запуск сервера
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("❌ Ошибка запуска сервера: %v", err)
 	}
@@ -115,7 +138,7 @@ func printStartupBanner(cfg config.Config) {
 	fmt.Printf("🏠 Режим:        %s\n", gin.Mode())
 	fmt.Printf("🔗 Адрес:        http://localhost:%s\n", cfg.Port)
 	fmt.Printf("🗄️  База данных:  %s\n", cfg.DbPath)
-	fmt.Printf("🔑 Секрет (hash): %x\n", []byte(cfg.SecretKey)[:16]) // Показываем хеш для безопасности
+	fmt.Printf("🔑 Секрет (hash): %x\n", []byte(cfg.SecretKey)[:16])
 	fmt.Printf("👥 Пользователи: admin / admin123\n")
 	fmt.Printf("   (и другие: manager, courier1)\n")
 	fmt.Println("──────────────────────────────────────────────")

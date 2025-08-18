@@ -1,0 +1,49 @@
+<!-- templates/new-order.html -->
+<div id="new-order" class="page">
+    <div class="page-header">
+        <h1 class="page-title">➕ Новый заказ</h1>
+        <button class="btn btn-primary" onclick="showPage('dashboard')">← Назад</button>
+    </div>
+    <div class="fast-order-panel">
+        <div class="fast-order-title">⚡ Быстрое создание заказа</div>
+        <form id="fast-order-form">
+            <div class="fast-form-grid">
+                <div class="form-group">
+                    <label>👤 Отправитель</label>
+                    <input type="text" class="form-input" placeholder="Имя" id="sender-name">
+                    <input type="tel" class="form-input" placeholder="Телефон" id="sender-phone">
+                    <textarea class="form-input" placeholder="Адрес забора" id="sender-address" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>👥 Получатель</label>
+                    <input type="text" class="form-input" placeholder="Имя" id="receiver-name" required>
+                    <input type="tel" class="form-input" placeholder="Телефон" id="receiver-phone" required>
+                    <textarea class="form-input" placeholder="Адрес доставки" id="receiver-address" rows="2" required></textarea>
+                </div>
+            </div>
+            <div class="fast-form-grid">
+                <div class="form-group">
+                    <label>📦 Товар</label>
+                    <input type="text" class="form-input" placeholder="Описание" id="product-desc">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="number" class="form-input" placeholder="Вес (кг)" id="weight" step="0.1">
+                        <input type="number" class="form-input" placeholder="Объем (л)" id="volume" step="0.1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>💳 Оплата</label>
+                    <select class="form-select" id="payment-method">
+                        <option value="cash">Наличные</option>
+                        <option value="card">Карта</option>
+                        <option value="online">Онлайн</option>
+                    </select>
+                    <input type="number" class="form-input" placeholder="Стоимость доставки (₸)" id="delivery-cost" value="500">
+                </div>
+            </div>
+            <div class="action-row">
+                <button type="button" class="btn btn-warning btn-sm" onclick="resetForm()">🗑️ Очистить</button>
+                <button type="button" class="btn btn-primary" onclick="submitFastOrder()">✅ Создать</button>
+            </div>
+        </form>
+    </div>
+</div>

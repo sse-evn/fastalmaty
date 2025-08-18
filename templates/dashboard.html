@@ -1,0 +1,55 @@
+<!-- templates/dashboard.html -->
+<div id="dashboard" class="page">
+    <div class="page-header">
+        <h1 class="page-title">📊 Дашборд</h1>
+        <button class="btn btn-primary" onclick="updateStats()">🔄 Обновить</button>
+    </div>
+    <div class="stats-grid">
+        <div class="stat-card total">
+            <div class="stat-header">
+                <div class="stat-title">Всего</div>
+                <div class="stat-icon">📦</div>
+            </div>
+            <div class="stat-number" id="total-orders">0</div>
+        </div>
+        <div class="stat-card new">
+            <div class="stat-header">
+                <div class="stat-title">Новые</div>
+                <div class="stat-icon">🆕</div>
+            </div>
+            <div class="stat-number" id="new-orders">0</div>
+        </div>
+        <div class="stat-card progress">
+            <div class="stat-header">
+                <div class="stat-title">В пути</div>
+                <div class="stat-icon">🚚</div>
+            </div>
+            <div class="stat-number" id="progress-orders">0</div>
+        </div>
+        <div class="stat-card completed">
+            <div class="stat-header">
+                <div class="stat-title">Получено</div>
+                <div class="stat-icon">✅</div>
+            </div>
+            <div class="stat-number" id="completed-orders">0</div>
+        </div>
+    </div>
+    <div class="orders-section">
+        <div class="section-header">
+            <h2 class="section-title">Последние заказы</h2>
+            <a href="#" class="btn btn-primary" onclick="showPage('orders')">📋 Все</a>
+        </div>
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Клиент</th>
+                    <th>Адрес</th>
+                    <th>Статус</th>
+                    <th>Сумма</th>
+                </tr>
+            </thead>
+            <tbody id="recent-orders"></tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,25 @@
+<!-- templates/orders.html -->
+<div id="orders" class="page">
+    <div class="page-header">
+        <h1 class="page-title">📦 Все заказы</h1>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" class="search-bar" placeholder="Поиск..." id="search-input" oninput="searchOrders()">
+            <button class="btn btn-success" onclick="showPage('new-order')">➕ Новый</button>
+        </div>
+    </div>
+    <div class="orders-section">
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Получатель</th>
+                    <th>Адрес</th>
+                    <th>Статус</th>
+                    <th>Дата</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody id="all-orders"></tbody>
+        </table>
+    </div>
+</div>

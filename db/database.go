@@ -41,6 +41,10 @@ func createTables() {
 		role TEXT,
 		name TEXT
 	);
+	CREATE TABLE IF NOT EXISTS api_keys (
+    key TEXT PRIMARY KEY,
+    created_at TEXT
+);
 	CREATE TABLE IF NOT EXISTS orders (
 		id TEXT PRIMARY KEY,
 		sender_name TEXT,
