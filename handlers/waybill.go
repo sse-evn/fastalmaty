@@ -3,7 +3,6 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
 	"fastalmaty/db"
 	"fastalmaty/models"
@@ -11,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
@@ -38,13 +39,15 @@ func WaybillHandler(c *gin.Context) {
 
 	pdfPath := filepath.Join("static", "waybills", orderID+".pdf")
 
+	// Если PDF уже есть — отдаем
 	if _, err := os.Stat(pdfPath); err == nil {
 		c.JSON(http.StatusOK, gin.H{"pdf_url": "/" + pdfPath})
 		return
 	}
 
+	// Генерируем PDF
 	if err := generateWaybillPDF(order, pdfPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка генерации PDF"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка генерации PDF: " + err.Error()})
 		return
 	}
 
@@ -56,28 +59,39 @@ func generateWaybillPDF(order models.Order, outputPath string) error {
 		return err
 	}
 
+	// Читаем и рендерим HTML-шаблон
 	tmpl, err := template.ParseFiles("templates/waybill.html")
 	if err != nil {
 		return err
 	}
 
-	var buf bytes.Buffer
+	var buf strings.Builder
 	if err := tmpl.Execute(&buf, order); err != nil {
 		return err
 	}
 
+	htmlContent := buf.String()
+
+	// Настройка chromedp
 	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
+	// Устанавливаем таймаут
+	ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	var pdfData []byte
 	err = chromedp.Run(ctx,
 		chromedp.Navigate("about:blank"),
 		chromedp.WaitReady("body"),
-		// ✅ Правильный способ вставить HTML
-		chromedp.Evaluate(`document.write(`+string(buf.String())+`)`, nil),
+		chromedp.Evaluate("document.write(`"+htmlContent+"`)", nil),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var err error
-			pdfData, _, err = page.PrintToPDF().WithPrintBackground(true).Do(ctx)
+			pdfData, _, err = page.PrintToPDF().
+				WithPrintBackground(true).
+				WithPaperWidth(8.27).   // A4 ширина (в дюймах)
+				WithPaperHeight(11.69). // A4 высота
+				Do(ctx)
 			return err
 		}),
 	)
@@ -85,5 +99,6 @@ func generateWaybillPDF(order models.Order, outputPath string) error {
 		return err
 	}
 
+	// Сохраняем PDF
 	return os.WriteFile(outputPath, pdfData, 0644)
 }

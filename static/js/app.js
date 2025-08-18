@@ -50,6 +50,9 @@ async function loadAllOrders() {
             <td>${o.receiver_address}</td>
             <td><span class="status-badge status-new">${o.status}</span></td>
             <td>${new Date(o.created_at).toLocaleDateString()}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="generateWaybill('${o.id}')">🖨️ Накладная</button>
+            </td>
         </tr>
     `).join('');
 }
@@ -179,6 +182,24 @@ async function saveSettings() {
         alert('Настройки сохранены!');
     } else {
         alert('Ошибка сохранения');
+    }
+}
+
+// 🖨️ Генерация накладной (PDF)
+async function generateWaybill(orderID) {
+    try {
+        const res = await fetch(`/api/waybill/${orderID}`);
+        const data = await res.json();
+
+        if (data.pdf_url) {
+            // Открываем PDF в новой вкладке
+            window.open(data.pdf_url, '_blank');
+        } else {
+            alert('❌ Ошибка: ' + (data.error || 'Не удалось сгенерировать накладную'));
+        }
+    } catch (err) {
+        alert('Ошибка подключения к серверу');
+        console.error(err);
     }
 }
 
