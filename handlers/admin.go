@@ -1,9 +1,8 @@
-// handlers/admin.go
-
 package handlers
 
 import (
 	"fastalmaty/db"
+	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -22,47 +21,39 @@ func GetUsersHandler(c *gin.Context) {
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT id, username, role, name FROM users")
+	rows, err := db.DB.Query("SELECT id, username, role, name, created_at FROM users ORDER BY id DESC")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("Ошибка при получении пользователей: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
 		return
 	}
 	defer rows.Close()
 
-	var users []struct {
-		ID       int    `json:"id"`
-		Username string `json:"username"`
-		Role     string `json:"role"`
-		Name     string `json:"name"`
-	}
-
+	var users []gin.H
 	for rows.Next() {
-		var u struct {
-			ID                   int
-			Username, Role, Name string
-		}
-		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.Name); err != nil {
+		var id int
+		var username, role, name, createdAt string
+		if err := rows.Scan(&id, &username, &role, &name, &createdAt); err != nil {
+			log.Printf("Ошибка при сканировании пользователя: %v", err)
 			continue
 		}
-		users = append(users, struct {
-			ID       int    `json:"id"`
-			Username string `json:"username"`
-			Role     string `json:"role"`
-			Name     string `json:"name"`
-		}{
-			ID:       u.ID,
-			Username: u.Username,
-			Role:     u.Role,
-			Name:     u.Name,
+
+		users = append(users, gin.H{
+			"id":         id,
+			"username":   username,
+			"role":       role,
+			"name":       name,
+			"created_at": createdAt,
 		})
 	}
 
-	c.JSON(http.StatusOK, users)
+	c.JSON(http.StatusOK, gin.H{"users": users})
 }
 
 // CreateUserHandler — создать нового пользователя
 func CreateUserHandler(c *gin.Context) {
 	session := sessions.Default(c)
+	currentUserID := session.Get("user_id").(int)
 	role := session.Get("user_role").(string)
 	if role != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Доступ запрещён"})
@@ -75,46 +66,97 @@ func CreateUserHandler(c *gin.Context) {
 		Name     string `json:"name"`
 		Role     string `json:"role"`
 	}
+
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные запроса"})
 		return
 	}
 
+	// Проверка на существование пользователя
+	var exists bool
+	err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username = ?)", user.Username).Scan(&exists)
+	if err != nil {
+		log.Printf("Ошибка при проверке существования пользователя: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
+		return
+	}
+
+	if exists {
+		c.JSON(http.StatusConflict, gin.H{"error": "Пользователь с таким именем уже существует"})
+		return
+	}
+
+	// Хеширование пароля
 	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка хеширования пароля"})
-		return
-	}
-
-	_, err = db.DB.Exec(`
-		INSERT INTO users (username, password, role, name) 
-		VALUES (?, ?, ?, ?)
-	`, user.Username, string(hashed), user.Role, user.Name)
-	if err != nil {
+		log.Printf("Ошибка хеширования пароля: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания пользователя"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Пользователь создан"})
+	// Создание пользователя
+	result, err := db.DB.Exec(`
+        INSERT INTO users (username, password, role, name, created_by, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    `, user.Username, string(hashed), user.Role, user.Name, currentUserID, time.Now().Format(time.RFC3339))
+
+	if err != nil {
+		log.Printf("Ошибка при создании пользователя: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания пользователя"})
+		return
+	}
+
+	userID, _ := result.LastInsertId()
+	log.Printf("Администратор ID %d создал нового пользователя: %s (ID: %d)", currentUserID, user.Username, userID)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Пользователь успешно создан",
+		"user_id": userID,
+	})
 }
 
 // DeleteUserHandler — удалить пользователя
 func DeleteUserHandler(c *gin.Context) {
 	session := sessions.Default(c)
+	currentUserID := session.Get("user_id").(int)
 	role := session.Get("user_role").(string)
 	if role != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Доступ запрещён"})
 		return
 	}
 
-	id := c.Param("id")
-	_, err := db.DB.Exec("DELETE FROM users WHERE id = ?", id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	userID := c.Param("id")
+
+	// Проверка, не пытается ли администратор удалить самого себя
+	if userID == string(rune(currentUserID)) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Нельзя удалить самого себя"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Пользователь удалён"})
+	// Проверка существования пользователя
+	var exists bool
+	err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)", userID).Scan(&exists)
+	if err != nil {
+		log.Printf("Ошибка при проверке существования пользователя: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
+		return
+	}
+
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Пользователь не найден"})
+		return
+	}
+
+	// Удаление пользователя
+	_, err = db.DB.Exec("DELETE FROM users WHERE id = ?", userID)
+	if err != nil {
+		log.Printf("Ошибка при удалении пользователя: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка удаления пользователя"})
+		return
+	}
+
+	log.Printf("Администратор ID %d удалил пользователя ID %s", currentUserID, userID)
+	c.JSON(http.StatusOK, gin.H{"message": "Пользователь успешно удалён"})
 }
 
 // GetApiKeysHandler — получить список API-ключей
@@ -126,38 +168,38 @@ func GetApiKeysHandler(c *gin.Context) {
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT key, created_at FROM api_keys")
+	rows, err := db.DB.Query("SELECT id, key, created_at, last_used FROM api_keys ORDER BY id DESC")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("Ошибка при получении API-ключей: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
 		return
 	}
 	defer rows.Close()
 
-	var keys []struct {
-		Key       string `json:"key"`
-		CreatedAt string `json:"created_at"`
-	}
-
+	var keys []gin.H
 	for rows.Next() {
-		var k struct{ Key, CreatedAt string }
-		if err := rows.Scan(&k.Key, &k.CreatedAt); err != nil {
+		var id int
+		var key, createdAt, lastUsed string
+		if err := rows.Scan(&id, &key, &createdAt, &lastUsed); err != nil {
+			log.Printf("Ошибка при сканировании API-ключа: %v", err)
 			continue
 		}
-		keys = append(keys, struct {
-			Key       string `json:"key"`
-			CreatedAt string `json:"created_at"`
-		}{
-			Key:       k.Key,
-			CreatedAt: k.CreatedAt,
+
+		keys = append(keys, gin.H{
+			"id":         id,
+			"key":        key,
+			"created_at": createdAt,
+			"last_used":  lastUsed,
 		})
 	}
 
-	c.JSON(http.StatusOK, keys)
+	c.JSON(http.StatusOK, gin.H{"api_keys": keys})
 }
 
 // GenerateApiKeyHandler — сгенерировать новый API-ключ
 func GenerateApiKeyHandler(c *gin.Context) {
 	session := sessions.Default(c)
+	currentUserID := session.Get("user_id").(int)
 	role := session.Get("user_role").(string)
 	if role != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Доступ запрещён"})
@@ -165,34 +207,69 @@ func GenerateApiKeyHandler(c *gin.Context) {
 	}
 
 	key := generateRandomString(32)
-	_, err := db.DB.Exec(`
-		INSERT INTO api_keys (key, created_at) VALUES (?, ?)
-	`, key, time.Now().Format(time.RFC3339))
+	now := time.Now().Format(time.RFC3339)
+
+	result, err := db.DB.Exec(`
+        INSERT INTO api_keys (key, created_at, created_by) 
+        VALUES (?, ?, ?)
+    `, key, now, currentUserID)
+
 	if err != nil {
+		log.Printf("Ошибка при генерации API-ключа: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка генерации ключа"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"key": key})
+	keyID, _ := result.LastInsertId()
+	log.Printf("Администратор ID %d сгенерировал новый API-ключ (ID: %d)", currentUserID, keyID)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "API-ключ успешно сгенерирован",
+		"key":     key,
+		"key_id":  keyID,
+	})
 }
 
 // RevokeApiKeyHandler — отозвать API-ключ
 func RevokeApiKeyHandler(c *gin.Context) {
 	session := sessions.Default(c)
+	currentUserID := session.Get("user_id").(int)
 	role := session.Get("user_role").(string)
 	if role != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Доступ запрещён"})
 		return
 	}
 
-	key := c.Query("key")
-	_, err := db.DB.Exec("DELETE FROM api_keys WHERE key = ?", key)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	keyID := c.Query("id")
+	if keyID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Не указан ID ключа"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Ключ отозван"})
+	// Проверка существования ключа
+	var exists bool
+	err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM api_keys WHERE id = ?)", keyID).Scan(&exists)
+	if err != nil {
+		log.Printf("Ошибка при проверке существования API-ключа: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
+		return
+	}
+
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "API-ключ не найден"})
+		return
+	}
+
+	// Удаление ключа
+	_, err = db.DB.Exec("DELETE FROM api_keys WHERE id = ?", keyID)
+	if err != nil {
+		log.Printf("Ошибка при отзыве API-ключа: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка отзыва ключа"})
+		return
+	}
+
+	log.Printf("Администратор ID %d отозвал API-ключ ID %s", currentUserID, keyID)
+	c.JSON(http.StatusOK, gin.H{"message": "API-ключ успешно отозван"})
 }
 
 // generateRandomString — генерирует случайную строку
