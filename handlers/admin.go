@@ -1,6 +1,8 @@
+// handlers/admin.go
 package handlers
 
 import (
+	"database/sql"
 	"fastalmaty/db"
 	"log"
 	"math/rand"
@@ -21,7 +23,11 @@ func GetUsersHandler(c *gin.Context) {
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT id, username, role, name, created_at FROM users ORDER BY id DESC")
+	rows, err := db.DB.Query(`
+        SELECT id, username, role, name, created_at 
+        FROM users 
+        ORDER BY id DESC
+    `)
 	if err != nil {
 		log.Printf("Ошибка при получении пользователей: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
@@ -32,10 +38,17 @@ func GetUsersHandler(c *gin.Context) {
 	var users []gin.H
 	for rows.Next() {
 		var id int
-		var username, role, name, createdAt string
+		var username, role, name string
+		var createdAt sql.NullString // ✅ Защита от NULL
+
 		if err := rows.Scan(&id, &username, &role, &name, &createdAt); err != nil {
 			log.Printf("Ошибка при сканировании пользователя: %v", err)
 			continue
+		}
+
+		createdAtStr := ""
+		if createdAt.Valid {
+			createdAtStr = createdAt.String
 		}
 
 		users = append(users, gin.H{
@@ -43,7 +56,7 @@ func GetUsersHandler(c *gin.Context) {
 			"username":   username,
 			"role":       role,
 			"name":       name,
-			"created_at": createdAt,
+			"created_at": createdAtStr,
 		})
 	}
 
@@ -72,7 +85,6 @@ func CreateUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Проверка на существование пользователя
 	var exists bool
 	err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username = ?)", user.Username).Scan(&exists)
 	if err != nil {
@@ -86,7 +98,6 @@ func CreateUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Хеширование пароля
 	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("Ошибка хеширования пароля: %v", err)
@@ -94,7 +105,6 @@ func CreateUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Создание пользователя
 	result, err := db.DB.Exec(`
         INSERT INTO users (username, password, role, name, created_by, created_at) 
         VALUES (?, ?, ?, ?, ?, ?)
@@ -107,7 +117,7 @@ func CreateUserHandler(c *gin.Context) {
 	}
 
 	userID, _ := result.LastInsertId()
-	log.Printf("Администратор ID %d создал нового пользователя: %s (ID: %d)", currentUserID, user.Username, userID)
+	log.Printf("Администратор ID %d создал нового пользователя: %s (ID: %d) с ролью: %s", currentUserID, user.Username, userID, user.Role)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Пользователь успешно создан",
@@ -127,13 +137,11 @@ func DeleteUserHandler(c *gin.Context) {
 
 	userID := c.Param("id")
 
-	// Проверка, не пытается ли администратор удалить самого себя
 	if userID == string(rune(currentUserID)) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Нельзя удалить самого себя"})
 		return
 	}
 
-	// Проверка существования пользователя
 	var exists bool
 	err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)", userID).Scan(&exists)
 	if err != nil {
@@ -147,7 +155,6 @@ func DeleteUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Удаление пользователя
 	_, err = db.DB.Exec("DELETE FROM users WHERE id = ?", userID)
 	if err != nil {
 		log.Printf("Ошибка при удалении пользователя: %v", err)
@@ -180,9 +187,16 @@ func GetApiKeysHandler(c *gin.Context) {
 	for rows.Next() {
 		var id int
 		var key, createdAt, lastUsed string
-		if err := rows.Scan(&id, &key, &createdAt, &lastUsed); err != nil {
+		var lastUsedNull sql.NullString
+
+		if err := rows.Scan(&id, &key, &createdAt, &lastUsedNull); err != nil {
 			log.Printf("Ошибка при сканировании API-ключа: %v", err)
 			continue
+		}
+
+		lastUsed = ""
+		if lastUsedNull.Valid {
+			lastUsed = lastUsedNull.String
 		}
 
 		keys = append(keys, gin.H{
@@ -246,7 +260,6 @@ func RevokeApiKeyHandler(c *gin.Context) {
 		return
 	}
 
-	// Проверка существования ключа
 	var exists bool
 	err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM api_keys WHERE id = ?)", keyID).Scan(&exists)
 	if err != nil {
@@ -260,7 +273,6 @@ func RevokeApiKeyHandler(c *gin.Context) {
 		return
 	}
 
-	// Удаление ключа
 	_, err = db.DB.Exec("DELETE FROM api_keys WHERE id = ?", keyID)
 	if err != nil {
 		log.Printf("Ошибка при отзыве API-ключа: %v", err)

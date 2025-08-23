@@ -1,5 +1,4 @@
 // main.go
-
 package main
 
 import (
@@ -24,23 +23,19 @@ func loadConfig() config.Config {
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️  Файл .env не найден, используем значения по умолчанию")
 	}
-
 	secret := os.Getenv("SECRET_KEY")
 	if secret == "" {
 		secret = "3b46329cb9c422a0fe6a8d39dbb0abbef85e974eb4198a5cd4ba8189e0c3f828"
 		log.Println("⚠️  SECRET_KEY не задан — используем небезопасный ключ!")
 	}
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "6066"
 	}
-
 	dbPath := os.Getenv("DATABASE_PATH")
 	if dbPath == "" {
 		dbPath = "./fastalmaty.db"
 	}
-
 	return config.Config{
 		SecretKey: secret,
 		Port:      port,
@@ -50,25 +45,22 @@ func loadConfig() config.Config {
 
 func main() {
 	cfg := loadConfig()
-
 	ginMode := os.Getenv("GIN_MODE")
 	if ginMode == "" {
 		ginMode = "debug"
 	}
 	gin.SetMode(ginMode)
 
+	runMigrations()
 	db.Init(cfg.DbPath)
 	defer db.Close()
 
 	router := gin.Default()
-
-	// ✅ Исправлено: один раз 127.0.0.1
 	err := router.SetTrustedProxies([]string{"127.0.0.1"})
 	if err != nil {
 		log.Fatal("❌ Ошибка настройки доверенных прокси:", err)
 	}
 
-	// Сессии
 	store := cookie.NewStore([]byte(cfg.SecretKey))
 	store.Options(sessions.Options{
 		Path:     "/",
@@ -78,11 +70,10 @@ func main() {
 	})
 	router.Use(sessions.Sessions("fastalmaty_session", store))
 
-	// Статика и шаблоны
 	router.LoadHTMLGlob("templates/*.html")
 	router.Use(static.Serve("/static", static.LocalFile("./static", false)))
 
-	// Роутинг для динамических шаблонов
+	// Динамическая загрузка шаблонов
 	router.GET("/templates/:page", func(c *gin.Context) {
 		page := c.Param("page")
 		filePath := filepath.Join("templates", page)
@@ -93,7 +84,6 @@ func main() {
 		c.File(filePath)
 	})
 
-	// API маршруты
 	api := router.Group("/api")
 	{
 		api.POST("/login", handlers.LoginHandler)
@@ -101,26 +91,60 @@ func main() {
 		api.GET("/stats", middleware.AuthRequired(), handlers.StatsHandler)
 		api.GET("/orders", middleware.AuthRequired(), handlers.GetOrdersHandler)
 		api.POST("/orders", middleware.AuthRequired(), handlers.CreateOrderHandler)
-		api.GET("/courier/orders", middleware.AuthRequired(), handlers.CourierOrdersHandler)
-		api.POST("/order/:id/confirm", middleware.AuthRequired(), handlers.ConfirmOrderHandler)
-		api.GET("/clients/search", middleware.AuthRequired(), handlers.SearchClientHandler)
-		api.POST("/clients/save", middleware.AuthRequired(), handlers.SaveClientHandler)
-		api.GET("/settings", middleware.AuthRequired(), handlers.GetSettingsHandler)
-		api.POST("/settings", middleware.AuthRequired(), handlers.SaveSettingsHandler)
-		api.GET("/waybill/:id", middleware.AuthRequired(), handlers.WaybillHandler)
-		api.POST("/orders/bulk", middleware.AuthRequired(), handlers.BulkUploadHandler)
-
-		// ✅ Админ
-		api.GET("/admin/users", middleware.AuthRequired(), handlers.GetUsersHandler)
-		api.POST("/admin/users", middleware.AuthRequired(), handlers.CreateUserHandler)
-		api.DELETE("/admin/users/:id", middleware.AuthRequired(), handlers.DeleteUserHandler)
-
-		api.GET("/admin/api-keys", middleware.AuthRequired(), handlers.GetApiKeysHandler)
-		api.POST("/admin/generate-api-key", middleware.AuthRequired(), handlers.GenerateApiKeyHandler)
-		api.DELETE("/admin/revoke-api-key", middleware.AuthRequired(), handlers.RevokeApiKeyHandler)
+		api.GET("/courier/orders",
+			middleware.AuthRequired(),
+			middleware.RoleRequired("admin", "manager", "courier"),
+			handlers.CourierOrdersHandler)
+		api.POST("/order/:id/confirm",
+			middleware.AuthRequired(),
+			handlers.ConfirmOrderHandler)
+		api.GET("/clients/search",
+			middleware.AuthRequired(),
+			handlers.SearchClientHandler)
+		api.POST("/clients/save",
+			middleware.AuthRequired(),
+			handlers.SaveClientHandler)
+		api.GET("/settings",
+			middleware.AuthRequired(),
+			handlers.GetSettingsHandler)
+		api.POST("/settings",
+			middleware.AuthRequired(),
+			handlers.SaveSettingsHandler)
+		api.GET("/waybill/:id",
+			middleware.AuthRequired(),
+			handlers.WaybillHandler)
+		api.POST("/orders/bulk",
+			middleware.AuthRequired(),
+			handlers.BulkUploadHandler)
+		api.GET("/analytics/orders-by-day",
+			middleware.AuthRequired(),
+			handlers.GetOrdersByDayHandler)
+		api.GET("/admin/users",
+			middleware.AuthRequired(),
+			middleware.RoleRequired("admin"),
+			handlers.GetUsersHandler)
+		api.POST("/admin/users",
+			middleware.AuthRequired(),
+			middleware.RoleRequired("admin"),
+			handlers.CreateUserHandler)
+		api.DELETE("/admin/users/:id",
+			middleware.AuthRequired(),
+			middleware.RoleRequired("admin"),
+			handlers.DeleteUserHandler)
+		api.GET("/admin/api-keys",
+			middleware.AuthRequired(),
+			middleware.RoleRequired("admin"),
+			handlers.GetApiKeysHandler)
+		api.POST("/admin/generate-api-key",
+			middleware.AuthRequired(),
+			middleware.RoleRequired("admin"),
+			handlers.GenerateApiKeyHandler)
+		api.POST("/admin/revoke-api-key",
+			middleware.AuthRequired(),
+			middleware.RoleRequired("admin"),
+			handlers.RevokeApiKeyHandler)
 	}
 
-	// HTML страницы
 	router.GET("/", middleware.AuthRequired(), handlers.IndexHandler)
 	router.GET("/login", handlers.LoginPageHandler)
 

@@ -1,9 +1,13 @@
+// handlers/order.go
 package handlers
 
 import (
+	"database/sql"
 	"fastalmaty/db"
 	"fastalmaty/models"
+	"fastalmaty/utils"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,33 +16,77 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func generateOrderID() string {
+	return fmt.Sprintf("ORD-%d-%d", time.Now().UnixNano(), rand.Intn(1000))
+}
+
 func StatsHandler(c *gin.Context) {
 	var stats models.Stats
 	db.DB.QueryRow("SELECT COUNT(*) FROM orders").Scan(&stats.Total)
-	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'в очереди'").Scan(&stats.New)
-	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'в пути'").Scan(&stats.Progress)
-	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'доставлен'").Scan(&stats.Delivered)
-	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'получен'").Scan(&stats.Completed)
-
+	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'new'").Scan(&stats.New)
+	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'progress'").Scan(&stats.Progress)
+	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'completed'").Scan(&stats.Completed)
 	c.JSON(http.StatusOK, stats)
 }
 
 func GetOrdersHandler(c *gin.Context) {
 	search := c.Query("search")
-	var rows *[]models.Order
+	limit := c.DefaultQuery("limit", "")
+
+	query := `SELECT id, receiver_name, receiver_address, status, created_at FROM orders`
+
+	args := []interface{}{}
 
 	if search != "" {
 		search = "%" + strings.ToLower(search) + "%"
-		rows = queryOrders(`
-			SELECT * FROM orders WHERE 
-			id LIKE ? OR receiver_name LIKE ? OR receiver_address LIKE ?
-			ORDER BY created_at DESC
-		`, search, search, search)
-	} else {
-		rows = queryOrders("SELECT * FROM orders ORDER BY created_at DESC")
+		query += " WHERE receiver_name LIKE ? OR receiver_address LIKE ? OR id LIKE ?"
+		args = append(args, search, search, search)
 	}
 
-	c.JSON(http.StatusOK, rows)
+	query += " ORDER BY created_at DESC"
+
+	if limit != "" {
+		if l, err := strconv.Atoi(limit); err == nil && l > 0 {
+			query += " LIMIT ?"
+			args = append(args, l)
+		}
+	}
+
+	rows, err := db.DB.Query(query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
+		return
+	}
+	defer rows.Close()
+
+	var orders []gin.H
+	for rows.Next() {
+		var id, receiverName, receiverAddress, status, createdAt string
+		var statusNull, createdAtNull sql.NullString
+
+		err := rows.Scan(&id, &receiverName, &receiverAddress, &statusNull, &createdAtNull)
+		if err != nil {
+			continue
+		}
+
+		if statusNull.Valid {
+			status = statusNull.String
+		}
+		if createdAtNull.Valid {
+			createdAt = createdAtNull.String
+		}
+
+		orders = append(orders, gin.H{
+			"id":               id,
+			"receiver_name":    receiverName,
+			"receiver_address": receiverAddress,
+			"status":           status,
+			"created_at":       createdAt,
+			"status_text":      utils.GetStatusText(status),
+		})
+	}
+
+	c.JSON(http.StatusOK, orders)
 }
 
 func CreateOrderHandler(c *gin.Context) {
@@ -52,12 +100,12 @@ func CreateOrderHandler(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&order); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный запрос"})
 		return
 	}
 
 	if order.ID == "" {
-		order.ID = fmt.Sprintf("ORD-%d", time.Now().Unix())
+		order.ID = generateOrderID()
 	}
 
 	weight, _ := strconv.ParseFloat(order.Package["weight_kg"], 64)
@@ -75,7 +123,7 @@ func CreateOrderHandler(c *gin.Context) {
 		order.Receiver["name"], order.Receiver["phone"], order.Receiver["address"],
 		order.Package["description"], weight, volume,
 		order.DeliveryCostTenge, order.PaymentMethod,
-		"в очереди", time.Now().Format(time.RFC3339),
+		"new", time.Now().Format(time.RFC3339),
 	)
 
 	if err != nil {
@@ -83,26 +131,18 @@ func CreateOrderHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Order created", "id": order.ID})
+	c.JSON(http.StatusCreated, gin.H{"message": "Заказ создан", "id": order.ID})
 }
 
-func queryOrders(query string, args ...interface{}) *[]models.Order {
-	rows, err := db.DB.Query(query, args...)
-	if err != nil {
-		return &[]models.Order{}
+func getStatusText(status string) string {
+	switch status {
+	case "new":
+		return "Новый"
+	case "progress":
+		return "В пути"
+	case "completed":
+		return "Доставлен"
+	default:
+		return status
 	}
-	defer rows.Close()
-
-	var orders []models.Order
-	for rows.Next() {
-		var o models.Order
-		_ = rows.Scan(
-			&o.ID, &o.SenderName, &o.SenderPhone, &o.SenderAddress,
-			&o.ReceiverName, &o.ReceiverPhone, &o.ReceiverAddress,
-			&o.Description, &o.WeightKg, &o.VolumeL, &o.DeliveryCostTenge,
-			&o.PaymentMethod, &o.Status, &o.CreatedAt,
-		)
-		orders = append(orders, o)
-	}
-	return &orders
 }

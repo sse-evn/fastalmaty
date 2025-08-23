@@ -1,66 +1,130 @@
+// handlers/courier.go
 package handlers
 
 import (
+	"database/sql"
 	"fastalmaty/db"
-	"fastalmaty/models"
+	"fastalmaty/utils"
 	"net/http"
+	"time"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
+// CourierOrdersHandler — получить заказы курьера
 func CourierOrdersHandler(c *gin.Context) {
-	session := sessions.Default(c)
-	role := session.Get("user_role").(string)
-	if role != "courier" {
+	userID := c.GetInt("user_id")
+	role := c.GetString("user_role")
+
+	if userID == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Не авторизован"})
+		return
+	}
+
+	var query string
+	var args []interface{}
+
+	// Админ и менеджер видят все активные заказы
+	if role == "admin" || role == "manager" {
+		query = `
+            SELECT id, receiver_name, receiver_address, status, created_at 
+            FROM orders 
+            WHERE status = 'progress' 
+            ORDER BY created_at DESC
+        `
+	} else if role == "courier" {
+		// Курьер видит только свои заказы
+		query = `
+            SELECT id, receiver_name, receiver_address, status, created_at 
+            FROM orders 
+            WHERE courier_id = ? AND status = 'progress' 
+            ORDER BY created_at DESC
+        `
+		args = append(args, userID)
+	} else {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Доступ запрещён"})
 		return
 	}
 
-	rows, err := db.DB.Query("SELECT * FROM orders WHERE status = 'в пути'")
+	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
 		return
 	}
 	defer rows.Close()
 
-	var orders []models.Order
+	var orders []gin.H
 	for rows.Next() {
-		var o models.Order
-		_ = rows.Scan(
-			&o.ID, &o.SenderName, &o.SenderPhone, &o.SenderAddress,
-			&o.ReceiverName, &o.ReceiverPhone, &o.ReceiverAddress,
-			&o.Description, &o.WeightKg, &o.VolumeL, &o.DeliveryCostTenge,
-			&o.PaymentMethod, &o.Status, &o.CreatedAt,
-		)
-		orders = append(orders, o)
+		var id, receiverName, receiverAddress, status, createdAt string
+		var statusNull, createdAtNull sql.NullString
+
+		err := rows.Scan(&id, &receiverName, &receiverAddress, &statusNull, &createdAtNull)
+		if err != nil {
+			continue
+		}
+
+		if statusNull.Valid {
+			status = statusNull.String
+		}
+		if createdAtNull.Valid {
+			createdAt = createdAtNull.String
+		}
+
+		// Форматируем дату
+		parsedTime, err := time.Parse(time.RFC3339, createdAt)
+		formattedDate := createdAt
+		if err == nil {
+			formattedDate = parsedTime.Format("02.01.2006 15:04")
+		}
+
+		orders = append(orders, gin.H{
+			"id":               id,
+			"receiver_name":    receiverName,
+			"receiver_address": receiverAddress,
+			"status":           status,
+			"status_text":      utils.GetStatusText(status),
+			"created_at":       formattedDate,
+		})
 	}
 
+	// ✅ Возвращаем массив (никогда не null)
 	c.JSON(http.StatusOK, orders)
 }
 
+// ConfirmOrderHandler — подтвердить заказ
 func ConfirmOrderHandler(c *gin.Context) {
+	userID := c.GetInt("user_id")
 	orderID := c.Param("id")
-	var req struct{ Action string }
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+
+	if userID == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Не авторизован"})
 		return
 	}
 
-	status := ""
-	switch req.Action {
-	case "accept":
-		status = "доставлен"
-	default:
+	var req struct {
+		Action string `json:"action"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный запрос"})
+		return
+	}
+
+	if req.Action != "accept" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неизвестное действие"})
 		return
 	}
 
-	_, err := db.DB.Exec("UPDATE orders SET status = ? WHERE id = ?", status, orderID)
+	_, err := db.DB.Exec(`
+        UPDATE orders 
+        SET status = 'completed', 
+            courier_id = COALESCE(courier_id, ?) 
+        WHERE id = ?
+    `, userID, orderID)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка обновления заказа"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Заказ доставлен"})
+	c.JSON(http.StatusOK, gin.H{"message": "Заказ подтверждён", "id": orderID})
 }
