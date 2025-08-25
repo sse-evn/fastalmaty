@@ -1,3 +1,5 @@
+// models/order.go
+
 package models
 
 type Order struct {
@@ -15,4 +17,5 @@ type Order struct {
 	PaymentMethod     string  `json:"payment_method"`
 	Status            string  `json:"status"`
 	CreatedAt         string  `json:"created_at"`
+	StatusText        string  `json:"status_text"`
 }

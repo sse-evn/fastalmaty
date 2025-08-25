@@ -2,6 +2,7 @@
 package main
 
 import (
+	"database/sql"
 	"fastalmaty/config"
 	"fastalmaty/db"
 	"fastalmaty/handlers"
@@ -42,7 +43,6 @@ func loadConfig() config.Config {
 		DbPath:    dbPath,
 	}
 }
-
 func main() {
 	cfg := loadConfig()
 	ginMode := os.Getenv("GIN_MODE")
@@ -84,6 +84,17 @@ func main() {
 		c.File(filePath)
 	})
 
+	// === Публичные маршруты (без авторизации) ===
+	// Отслеживание по телефону
+	router.GET("/track-by-phone", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "track_by_phone.html", nil)
+	})
+	router.GET("/api/track-by-phone", handlers.TrackByPhoneHandler)
+
+	// Публичная накладная (для курьера/клиента)
+	router.GET("/api/waybill/:id", handlers.WaybillHandler) // без middleware.AuthRequired()
+
+	// === Защищённые API маршруты ===
 	api := router.Group("/api")
 	{
 		api.POST("/login", handlers.LoginHandler)
@@ -110,9 +121,15 @@ func main() {
 		api.POST("/settings",
 			middleware.AuthRequired(),
 			handlers.SaveSettingsHandler)
-		api.GET("/waybill/:id",
+		api.GET("/orders/available",
 			middleware.AuthRequired(),
-			handlers.WaybillHandler)
+			middleware.RoleRequired("admin", "manager", "courier"),
+			handlers.AvailableOrdersHandler)
+		api.POST("/order/:id/take",
+			middleware.AuthRequired(),
+			middleware.RoleRequired("courier"),
+			handlers.TakeOrderHandler)
+
 		api.POST("/orders/bulk",
 			middleware.AuthRequired(),
 			handlers.BulkUploadHandler)
@@ -145,6 +162,7 @@ func main() {
 			handlers.RevokeApiKeyHandler)
 	}
 
+	// === Прочие маршруты ===
 	router.GET("/", middleware.AuthRequired(), handlers.IndexHandler)
 	router.GET("/login", handlers.LoginPageHandler)
 
@@ -153,6 +171,34 @@ func main() {
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("❌ Ошибка запуска сервера: %v", err)
 	}
+}
+func runMigrations() {
+	dbPath := "./fastalmaty.db"
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		log.Println("База данных не существует, миграции не требуются")
+		return
+	}
+
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		log.Fatal("Ошибка открытия базы данных:", err)
+	}
+	defer db.Close()
+
+	var hasCourierID bool
+	err = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('orders') WHERE name='courier_id'").Scan(&hasCourierID)
+	if err != nil {
+		log.Fatal("Ошибка проверки courier_id:", err)
+	}
+	if !hasCourierID {
+		_, err = db.Exec("ALTER TABLE orders ADD COLUMN courier_id INTEGER")
+		if err != nil {
+			log.Fatal("Ошибка добавления courier_id:", err)
+		}
+		log.Println("✅ Добавлен столбец courier_id в таблицу orders")
+	}
+
+	log.Println("✅ Миграции успешно выполнены")
 }
 
 func printStartupBanner(cfg config.Config) {

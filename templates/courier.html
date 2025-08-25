@@ -4,9 +4,32 @@
         <h1 class="page-title">🚴 Курьер</h1>
         <button class="btn btn-primary" onclick="showPage('dashboard')">← Назад</button>
     </div>
+
+    <!-- Доступные заказы -->
     <div class="orders-section">
         <div class="section-header">
-            <h2 class="section-title">Заказы в пути</h2>
+            <h2 class="section-title">📦 Доступные заказы</h2>
+            <button class="btn btn-success" onclick="loadAvailableOrders()">🔄</button>
+        </div>
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Клиент</th>
+                    <th>Адрес</th>
+                    <th>Вес/Объём</th>
+                    <th>Стоимость</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody id="available-orders"></tbody>
+        </table>
+    </div>
+
+    <!-- Мои заказы -->
+    <div class="orders-section">
+        <div class="section-header">
+            <h2 class="section-title">🚚 Мои заказы</h2>
             <button class="btn btn-success" onclick="loadCourierOrders()">🔄</button>
         </div>
         <table class="orders-table">

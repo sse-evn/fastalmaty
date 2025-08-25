@@ -1,8 +1,6 @@
-// Глобальные переменные
 let ordersChart = null;
 let apiKeys = [];
 
-// Переключение страниц
 function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const page = document.getElementById(pageId);
@@ -26,7 +24,6 @@ function onPageLoad(pageId) {
     }
 }
 
-// Загрузка страницы по AJAX
 async function loadPage(pageId) {
     try {
         const res = await fetch(`/templates/${pageId}.html`);
@@ -42,7 +39,6 @@ async function loadPage(pageId) {
     }
 }
 
-// --- Дашборд ---
 async function updateStats() {
     try {
         const res = await fetch('/api/stats', { credentials: 'include' });
@@ -59,27 +55,23 @@ async function updateStats() {
     }
 }
 
-// Загрузка последних заказов для дашборда
 async function loadRecentOrders() {
     try {
         const res = await fetch('/api/orders?limit=5', { credentials: 'include' });
         if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
-        const orders = await res.json();
-
+        const data = await res.json();
+        const orders = Array.isArray(data) ? data : data.orders;
         if (!Array.isArray(orders)) {
-            console.error("Ответ не является массивом:", orders);
+            console.error("Ответ не является массивом:", data);
             showNotification("Ошибка: некорректный ответ от сервера", "error");
             return;
         }
-
         const tbody = document.getElementById('recent-orders');
         if (!tbody) return;
-
         if (orders.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center">Нет заказов</td></tr>';
             return;
         }
-
         tbody.innerHTML = orders.map(o => `
             <tr>
                 <td>#${o.id || ''}</td>
@@ -95,18 +87,17 @@ async function loadRecentOrders() {
     }
 }
 
-// --- Новый заказ (улучшенная форма) ---
 function initNewOrderForm() {
     const phoneInput = document.getElementById('receiver-phone');
     if (!phoneInput) return;
-
     phoneInput.addEventListener('blur', async function() {
         const phone = this.value.trim();
         if (phone.length >= 10) {
             try {
                 const res = await fetch(`/api/clients/search?phone=${encodeURIComponent(phone)}`, { credentials: 'include' });
                 if (!res.ok) return;
-                const clients = await res.json();
+                const data = await res.json();
+                const clients = Array.isArray(data) ? data : data.clients;
                 if (Array.isArray(clients) && clients.length > 0) {
                     const c = clients[0];
                     document.getElementById('receiver-name').value = c.name || '';
@@ -120,13 +111,11 @@ function initNewOrderForm() {
     });
 }
 
-// Очистка формы нового заказа
 function resetForm() {
     document.getElementById('fast-order-form').reset();
     showNotification('Форма очищена', 'info');
 }
 
-// Отправка формы нового заказа
 async function submitFastOrder() {
     const orderData = {
         sender_name: document.getElementById('sender-name').value,
@@ -166,27 +155,23 @@ async function submitFastOrder() {
     }
 }
 
-// --- Заказы ---
 async function loadAllOrders() {
     try {
         const res = await fetch('/api/orders', { credentials: 'include' });
         if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
-        const orders = await res.json();
-
+        const data = await res.json();
+        const orders = Array.isArray(data) ? data : data.orders;
         if (!Array.isArray(orders)) {
-            console.error("Ответ не является массивом:", orders);
+            console.error("Ответ не является массивом:", data);
             showNotification("Ошибка: некорректный ответ от сервера", "error");
             return;
         }
-
         const tbody = document.getElementById('all-orders');
         if (!tbody) return;
-
         if (orders.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center">Нет заказов</td></tr>';
             return;
         }
-
         tbody.innerHTML = orders.map(o => `
             <tr>
                 <td class="order-id">#${o.id || ''}</td>
@@ -205,28 +190,24 @@ async function loadAllOrders() {
     }
 }
 
-// Поиск заказов
 async function searchOrders() {
     const searchTerm = document.getElementById('search-input').value.trim();
     try {
         const res = await fetch(`/api/orders?search=${encodeURIComponent(searchTerm)}`, { credentials: 'include' });
         if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
-        const orders = await res.json();
-
+        const data = await res.json();
+        const orders = Array.isArray(data) ? data : data.orders;
         if (!Array.isArray(orders)) {
-            console.error("Ответ не является массивом:", orders);
+            console.error("Ответ не является массивом:", data);
             showNotification("Ошибка: некорректный ответ от сервера", "error");
             return;
         }
-
         const tbody = document.getElementById('all-orders');
         if (!tbody) return;
-
         if (orders.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center">Заказы не найдены</td></tr>';
             return;
         }
-
         tbody.innerHTML = orders.map(o => `
             <tr>
                 <td class="order-id">#${o.id || ''}</td>
@@ -245,34 +226,29 @@ async function searchOrders() {
     }
 }
 
-// --- Курьер ---
 async function loadCourierOrders() {
     try {
         const res = await fetch('/api/courier/orders', { credentials: 'include' });
         if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
-
-        const orders = await res.json();
-
+        const data = await res.json();
+        const orders = Array.isArray(data) ? data : data.orders;
         if (!Array.isArray(orders)) {
-            console.error("Ответ не является массивом:", orders);
+            console.error("Ответ не является массивом:", data);
             showNotification("Ошибка: некорректный ответ от сервера", "error");
             return;
         }
-
         const tbody = document.getElementById('courier-orders');
         if (!tbody) return;
-
         if (orders.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center">Нет заказов в пути</td></tr>';
             return;
         }
-
         tbody.innerHTML = orders.map(o => `
             <tr>
                 <td class="order-id">#${o.id || ''}</td>
                 <td>${o.receiver_name || 'Не указан'}</td>
                 <td>${o.receiver_address || 'Не указан'}</td>
-                <td><span class="status-badge status-${o.status || 'new'}">${getStatusText(o.status)}</span></td>
+                <td><span class="status-badge status-${o.status || 'new'}">${o.status_text || getStatusText(o.status)}</span></td>
                 <td>
                     <button class="btn btn-success btn-sm" onclick="confirmOrder('${o.id}')">✅ Подтвердить</button>
                 </td>
@@ -284,33 +260,28 @@ async function loadCourierOrders() {
     }
 }
 
-// --- CRM ---
 async function searchClient() {
     const phone = document.getElementById('client-search').value.trim();
     if (phone.length < 3) {
         document.getElementById('clients-list').innerHTML = '<tr><td colspan="4" class="text-center">Введите минимум 3 символа для поиска</td></tr>';
         return;
     }
-
     try {
         const res = await fetch(`/api/clients/search?phone=${encodeURIComponent(phone)}`, { credentials: 'include' });
         if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
-        const clients = await res.json();
-
+        const data = await res.json();
+        const clients = Array.isArray(data) ? data : data.clients;
         if (!Array.isArray(clients)) {
-            console.error("Ответ не является массивом:", clients);
+            console.error("Ответ не является массивом:", data);
             showNotification("Ошибка: некорректный ответ от сервера", "error");
             return;
         }
-
         const tbody = document.getElementById('clients-list');
         if (!tbody) return;
-
         if (clients.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center">Клиенты не найдены</td></tr>';
             return;
         }
-
         tbody.innerHTML = clients.map(c => `
             <tr>
                 <td>${c.name || 'Не указан'}</td>
@@ -325,13 +296,11 @@ async function searchClient() {
     }
 }
 
-// --- Настройки ---
 async function loadSettings() {
     try {
         const res = await fetch('/api/settings', { credentials: 'include' });
         if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
         const settings = await res.json();
-
         document.getElementById('setting-company_name').value = settings.company_name || '';
         document.getElementById('setting-delivery_price').value = settings.delivery_price || 500;
         document.getElementById('setting-api_key').value = settings.api_key || '';
@@ -346,7 +315,6 @@ async function saveSettings() {
         company_name: document.getElementById('setting-company_name').value,
         delivery_price: parseFloat(document.getElementById('setting-delivery_price').value) || 500
     };
-
     try {
         const res = await fetch('/api/settings', {
             method: 'POST',
@@ -354,14 +322,11 @@ async function saveSettings() {
             body: JSON.stringify(settings),
             credentials: 'include'
         });
-
         const result = await res.json();
-
         if (!res.ok) {
             showNotification('Ошибка: ' + (result.error || 'Неизвестная ошибка'), 'error');
             return;
         }
-
         showNotification('Настройки успешно сохранены', 'success');
     } catch (err) {
         console.error('Ошибка сохранения настроек:', err);
@@ -369,15 +334,12 @@ async function saveSettings() {
     }
 }
 
-// --- Аналитика ---
 function initChart() {
     const ctx = document.getElementById('ordersChart');
     if (!ctx) return;
-
     if (ordersChart) {
         ordersChart.destroy();
     }
-
     ordersChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -401,16 +363,108 @@ function initChart() {
             }
         }
     });
-
     loadChartData();
 }
+async function loadAvailableOrders() {
+    try {
+        const res = await fetch('/api/orders/available', { credentials: 'include' });
+        if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
+        const orders = await res.json();
+
+        const tbody = document.getElementById('available-orders');
+        if (!tbody) return;
+
+        if (orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Нет доступных заказов</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = orders.map(o => `
+            <tr>
+                <td class="order-id">#${o.id}</td>
+                <td>${o.receiver_name || '—'}</td>
+                <td>${o.receiver_address || '—'}</td>
+                <td>${o.weight_kg || 0} кг / ${o.volume_l || 0} л</td>
+                <td>${o.delivery_cost || 0} ₸</td>
+                <td>
+                    <button class="btn btn-primary btn-sm" onclick="takeOrder('${o.id}')">✅ Взять</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        console.error('Ошибка загрузки доступных заказов:', err);
+        showNotification('Ошибка: ' + err.message, 'error');
+    }
+}
+
+async function loadAvailableOrders() {
+    try {
+        const res = await fetch('/api/orders/available', { credentials: 'include' });
+        if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
+        const orders = await res.json();
+
+        const tbody = document.getElementById('available-orders');
+        if (!tbody) return;
+
+        if (orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Нет доступных заказов</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = orders.map(o => `
+            <tr>
+                <td class="order-id">#${o.id}</td>
+                <td>${o.receiver_name || '—'}</td>
+                <td>${o.receiver_address || '—'}</td>
+                <td>${o.weight_kg || 0} кг / ${o.volume_l || 0} л</td>
+                <td>${o.delivery_cost || 0} ₸</td>
+                <td>
+                    <button class="btn btn-primary btn-sm" onclick="takeOrder('${o.id}')">✅ Взять</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        console.error('Ошибка загрузки доступных заказов:', err);
+        showNotification('Ошибка: ' + err.message, 'error');
+    }
+}
+
+// --- Взять заказ ---
+async function takeOrder(orderID) {
+    if (!confirm('Вы уверены, что хотите взять этот заказ?')) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/order/${orderID}/take`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            showNotification('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'error');
+            return;
+        }
+
+        showNotification('Заказ взят в работу', 'success');
+        loadAvailableOrders();
+        loadCourierOrders();
+    } catch (err) {
+        console.error('Ошибка при взятии заказа:', err);
+        showNotification('Ошибка: ' + err.message, 'error');
+    }
+}
+
+
 
 async function loadChartData() {
     try {
         const res = await fetch('/api/analytics/orders-by-day', { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
-
         if (ordersChart && Array.isArray(data.labels) && Array.isArray(data.values)) {
             ordersChart.data.labels = data.labels;
             ordersChart.data.datasets[0].data = data.values;
@@ -421,7 +475,6 @@ async function loadChartData() {
     }
 }
 
-// --- Админ-панель ---
 async function loadAdminPanel() {
     await loadAdminUsers();
     await loadAdminApiKeys();
@@ -435,14 +488,11 @@ async function loadAdminUsers() {
         const users = Array.isArray(data.users) ? data.users : [];
         const tbody = document.querySelector('#admin-users tbody');
         if (!tbody) return;
-
         document.getElementById('admin-user-count').textContent = users.length;
-
         if (users.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center">Нет пользователей</td></tr>';
             return;
         }
-
         tbody.innerHTML = users.map(u => `
             <tr>
                 <td>${u.username || '—'}</td>
@@ -468,14 +518,11 @@ async function loadAdminApiKeys() {
         apiKeys = keys;
         const tbody = document.querySelector('#admin-api-keys tbody');
         if (!tbody) return;
-
         document.getElementById('admin-api-key-count').textContent = keys.length;
-
         if (keys.length === 0) {
             tbody.innerHTML = '<tr><td colspan="3" class="text-center">Нет API-ключей</td></tr>';
             return;
         }
-
         tbody.innerHTML = keys.map(k => `
             <tr>
                 <td>
@@ -498,7 +545,6 @@ async function loadAdminApiKeys() {
     }
 }
 
-// --- API Ключи ---
 function generateApiKey() {
     fetch('/api/admin/generate-api-key', {
         method: 'POST',
@@ -535,7 +581,6 @@ function revokeApiKey(keyId) {
     if (!confirm('Вы уверены, что хотите отозвать этот API-ключ?')) {
         return;
     }
-
     fetch(`/api/admin/revoke-api-key?id=${keyId}`, {
         method: 'POST',
         credentials: 'include'
@@ -555,7 +600,6 @@ function revokeApiKey(keyId) {
     });
 }
 
-// --- Модальное окно добавления пользователя ---
 function openAddUserModal() {
     document.getElementById('addUserModal').style.display = 'flex';
 }
@@ -572,7 +616,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const formData = new FormData(this);
             const data = Object.fromEntries(formData);
-
             try {
                 const res = await fetch('/api/admin/users', {
                     method: 'POST',
@@ -580,14 +623,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify(data),
                     credentials: 'include'
                 });
-
                 const result = await res.json();
-
                 if (!res.ok) {
                     showNotification('Ошибка: ' + (result.error || 'Неизвестная ошибка'), 'error');
                     return;
                 }
-
                 showNotification('Пользователь успешно создан', 'success');
                 closeAddUserModal();
                 loadAdminUsers();
@@ -599,7 +639,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// --- Другие функции ---
 function generateWaybill(orderID) {
     window.open(`/api/waybill/${orderID}`, '_blank');
 }
@@ -630,7 +669,6 @@ function deleteUser(userId, username) {
     if (!confirm(`Вы уверены, что хотите удалить пользователя "${username}"?`)) {
         return;
     }
-
     fetch(`/api/admin/users/${userId}`, {
         method: 'DELETE',
         credentials: 'include'
@@ -650,7 +688,6 @@ function deleteUser(userId, username) {
     });
 }
 
-// --- Вспомогательные функции ---
 function getRoleBadge(role) {
     const badges = {
         'admin': '<span class="badge badge-danger">Администратор</span>',
@@ -680,7 +717,6 @@ function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
-
     notification.style.position = 'fixed';
     notification.style.bottom = '20px';
     notification.style.right = '20px';
@@ -690,7 +726,6 @@ function showNotification(message, type) {
     notification.style.zIndex = '9999';
     notification.style.maxWidth = '300px';
     notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-
     if (type === 'success') {
         notification.style.backgroundColor = '#4CAF50';
     } else if (type === 'error') {
@@ -698,9 +733,7 @@ function showNotification(message, type) {
     } else {
         notification.style.backgroundColor = '#2196F3';
     }
-
     document.body.appendChild(notification);
-
     setTimeout(() => {
         notification.style.opacity = '0';
         notification.style.transition = 'opacity 0.5s ease';
@@ -710,7 +743,6 @@ function showNotification(message, type) {
     }, 5000);
 }
 
-// Навигация
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-page]').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -723,6 +755,5 @@ document.addEventListener('DOMContentLoaded', () => {
             showPage(page);
         });
     });
-
     showPage('dashboard');
 });

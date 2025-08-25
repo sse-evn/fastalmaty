@@ -7,6 +7,7 @@ import (
 	"fastalmaty/db"
 	"fastalmaty/models"
 	"html/template"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -18,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// WaybillHandler — возвращает PDF-накладную напрямую
 func WaybillHandler(c *gin.Context) {
 	orderID := c.Param("id")
 
@@ -33,27 +35,45 @@ func WaybillHandler(c *gin.Context) {
 			&order.Description, &order.WeightKg, &order.VolumeL, &order.DeliveryCostTenge,
 			&order.PaymentMethod, &order.Status, &order.CreatedAt)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Заказ не найден"})
+		c.String(http.StatusNotFound, "Заказ не найден")
 		return
 	}
 
-	pdfPath := filepath.Join("static", "waybills", orderID+".pdf")
+	// Генерируем имя файла
+	filename := "ORD-" + orderID + ".pdf"
+	pdfPath := filepath.Join("static", "waybills", filename)
 
-	// Если PDF уже есть — отдаем
-	if _, err := os.Stat(pdfPath); err == nil {
-		c.JSON(http.StatusOK, gin.H{"pdf_url": "/" + pdfPath})
+	// 1. Если PDF уже есть — отдаем файл
+	if file, err := os.Open(pdfPath); err == nil {
+		defer file.Close()
+		c.Header("Content-Type", "application/pdf")
+		c.Header("Content-Disposition", "inline; filename="+filename)
+		c.Status(http.StatusOK)
+		io.Copy(c.Writer, file)
 		return
 	}
 
-	// Генерируем PDF
+	// 2. Если нет — генерируем
 	if err := generateWaybillPDF(order, pdfPath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка генерации PDF: " + err.Error()})
+		c.String(http.StatusInternalServerError, "Ошибка генерации PDF: "+err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"pdf_url": "/" + pdfPath})
+	// 3. Отдаем только что сгенерированный PDF
+	file, err := os.Open(pdfPath)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Ошибка чтения PDF")
+		return
+	}
+	defer file.Close()
+
+	c.Header("Content-Type", "application/pdf")
+	c.Header("Content-Disposition", "inline; filename="+filename)
+	c.Status(http.StatusOK)
+	io.Copy(c.Writer, file)
 }
 
+// generateWaybillPDF — генерирует PDF из HTML-шаблона с помощью chromedp
 func generateWaybillPDF(order models.Order, outputPath string) error {
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 		return err
@@ -76,7 +96,7 @@ func generateWaybillPDF(order models.Order, outputPath string) error {
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
 
-	// Устанавливаем таймаут
+	// Таймаут
 	ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -89,7 +109,7 @@ func generateWaybillPDF(order models.Order, outputPath string) error {
 			var err error
 			pdfData, _, err = page.PrintToPDF().
 				WithPrintBackground(true).
-				WithPaperWidth(8.27).   // A4 ширина (в дюймах)
+				WithPaperWidth(8.27).   // A4 ширина
 				WithPaperHeight(11.69). // A4 высота
 				Do(ctx)
 			return err
@@ -99,6 +119,6 @@ func generateWaybillPDF(order models.Order, outputPath string) error {
 		return err
 	}
 
-	// Сохраняем PDF
+	// Сохраняем PDF на диск
 	return os.WriteFile(outputPath, pdfData, 0644)
 }

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Отслеживание заказов — FastAlmaty</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .track-container {
+            max-width: 600px;
+            margin: 60px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 6px 30px rgba(0,0,0,0.12);
+            text-align: center;
+            font-family: -apple-system, sans-serif;
+        }
+        .track-title {
+            font-size: 24px;
+            margin-bottom: 16px;
+            color: #1976D2;
+        }
+        .track-subtitle {
+            color: #555;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        .phone-input-group {
+            margin-bottom: 20px;
+        }
+        .phone-input-group input {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        .phone-input-group input:focus {
+            border-color: #1976D2;
+            outline: none;
+        }
+        .btn-track {
+            background: #1976D2;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-track:hover {
+            background: #1565C0;
+        }
+        .orders-list {
+            margin-top: 30px;
+            text-align: left;
+        }
+        .order-item {
+            padding: 16px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            background: #f9f9f9;
+        }
+        .order-id {
+            font-weight: bold;
+            color: #1976D2;
+        }
+        .order-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+        .status-new { background: #FFF3E0; color: #F57C00; }
+        .status-progress { background: #E3F2FD; color: #1976D2; }
+        .status-completed { background: #E8F5E8; color: #388E3C; }
+        .status-cancelled { background: #FFEBEE; color: #D32F2F; }
+        .no-orders {
+            color: #777;
+            font-style: italic;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1976D2;
+            text-decoration: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="track-container">
+        <div class="track-title">🚚 Отслеживание заказов</div>
+        <div class="track-subtitle">
+            Введите ваш номер телефона, чтобы увидеть все активные и завершённые заказы.
+        </div>
+
+        <div class="phone-input-group">
+            <input type="tel" id="phone" placeholder="Введите номер телефона (например, 77071234567)" />
+        </div>
+        <button class="btn-track" onclick="searchOrdersByPhone()">🔍 Найти заказы</button>
+
+        <div id="results" class="orders-list"></div>
+
+        <a href="/" class="back-link">← На главную</a>
+    </div>
+
+    <script>
+        async function searchOrdersByPhone() {
+            const phone = document.getElementById('phone').value.trim();
+            const results = document.getElementById('results');
+            results.innerHTML = '<div>Поиск...</div>';
+
+            if (!phone) {
+                results.innerHTML = '<div class="no-orders">Введите номер телефона</div>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/track-by-phone?phone=${encodeURIComponent(phone)}`);
+                if (!res.ok) {
+                    throw new Error('Не удалось найти заказы');
+                }
+                const orders = await res.json();
+
+                if (orders.length === 0) {
+                    results.innerHTML = '<div class="no-orders">Заказы не найдены</div>';
+                    return;
+                }
+
+                results.innerHTML = orders.map(o => `
+                    <div class="order-item">
+                        <div><strong>Заказ:</strong> <span class="order-id">#${o.id}</span></div>
+                        <div><strong>Получатель:</strong> ${o.receiver_name || '—'}</div>
+                        <div><strong>Адрес:</strong> ${o.receiver_address || '—'}</div>
+                        <div><strong>Статус:</strong> 
+                            <span class="order-status status-${o.status}">
+                                ${getStatusText(o.status)}
+                            </span>
+                        </div>
+                        <div><strong>Дата:</strong> ${formatDate(o.created_at)}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                results.innerHTML = '<div class="no-orders">Ошибка: не удалось загрузить данные</div>';
+                console.error('Ошибка поиска заказов:', err);
+            }
+        }
+
+        // Вспомогательные функции (копия из app.js)
+        function getStatusText(status) {
+            const map = {
+                'new': 'Новый',
+                'progress': 'В пути',
+                'completed': 'Доставлен',
+                'cancelled': 'Отменен'
+            };
+            return map[status] || status;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            const date = new Date(dateStr);
+            return isNaN(date.getTime()) ? '—' : date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+    </script>
+</body>
+</html>
