@@ -1,0 +1,31 @@
+/* =============== БАЗОВЫЕ СТИЛИ =============== */
+
+:root {
+    --primary: #3b82f6;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --dark: #1f2937;
+    --light: #f9fafb;
+    --border: rgba(255, 255, 255, 0.1);
+    --shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    --hover: rgba(255, 255, 255, 0.08);
+    --accent: #8b5cf6;
+    --telegram: #0088cc;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background: #f5f7fa; /* ← Лёгкий серо-голубой */
+    color: #333;
+    min-height: 100vh;
+    line-height: 1.5;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');

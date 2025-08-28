@@ -1,88 +1,147 @@
-// handlers/analytics.go
 package handlers
 
 import (
-	"database/sql"
 	"fastalmaty/db"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetOrdersByDayHandler(c *gin.Context) {
-	rows, err := db.DB.Query(`
-        SELECT 
-            date(created_at) as day,
-            count(*) as count
-        FROM orders
-        WHERE created_at >= date('now', '-7 days')
-        GROUP BY day
-        ORDER BY day
-    `)
+// OrdersByDay — данные по заказам по дням
+type OrdersByDay struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+}
+
+// TopCourier — топ курьеров
+type TopCourier struct {
+	Rank      int    `json:"rank"`
+	Name      string `json:"name"`
+	Delivered int    `json:"delivered"`
+	Revenue   int    `json:"revenue"`
+}
+
+// AnalyticsData — основная структура для аналитики
+type AnalyticsData struct {
+	TotalOrders     int           `json:"total_orders"`
+	Completed       int           `json:"completed"`
+	InProgress      int           `json:"in_progress"`
+	Cancelled       int           `json:"cancelled"`
+	Revenue         int           `json:"revenue"`
+	AvgDeliveryTime float64       `json:"avg_delivery_time"`
+	Days            []OrdersByDay `json:"days"`
+	TopCouriers     []TopCourier  `json:"top_couriers"`
+}
+
+// GetOrdersByDayData — получает данные по заказам за 7 дней
+func GetOrdersByDayData() ([]OrdersByDay, error) {
+	var data []OrdersByDay
+
+	query := `
+		SELECT DATE(created_at) as date, COUNT(*) as count
+		FROM orders
+		WHERE created_at >= date('now', '-7 days')
+		GROUP BY DATE(created_at)
+		ORDER BY date
+	`
+
+	rows, err := db.DB.Query(query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return nil, err
 	}
 	defer rows.Close()
 
-	var labels []string
-	var values []int
-
 	for rows.Next() {
-		var day string
-		var count int
-		var dayNull sql.NullString
-		if err := rows.Scan(&dayNull, &count); err != nil {
+		var item OrdersByDay
+		if err := rows.Scan(&item.Date, &item.Count); err != nil {
 			continue
 		}
-		if dayNull.Valid {
-			day = dayNull.String
-		} else {
-			day = "Неизвестно"
-		}
-		labels = append(labels, day)
-		values = append(values, count)
+		data = append(data, item)
 	}
 
-	// Заполняем пропущенные дни (если за день 0 заказов)
-	fillMissingDays(&labels, &values)
-
-	c.JSON(http.StatusOK, gin.H{
-		"labels": labels,
-		"values": values,
-	})
+	return data, nil
 }
 
-// fillMissingDays — заполняет пропущенные дни в диапазоне
-func fillMissingDays(labels *[]string, values *[]int) {
-	if len(*labels) == 0 {
+// GetTopCouriers — получает топ-5 курьеров
+func GetTopCouriers() ([]TopCourier, error) {
+	var couriers []TopCourier
+
+	query := `
+		SELECT u.name, 
+		       COUNT(o.id) as delivered, 
+		       COALESCE(SUM(o.delivery_cost_tenge), 0) as revenue
+		FROM users u
+		LEFT JOIN orders o ON u.id = o.courier_id AND o.status = 'completed'
+		WHERE u.role = 'courier'
+		GROUP BY u.id, u.name
+		ORDER BY delivered DESC
+		LIMIT 5
+	`
+
+	rows, err := db.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	rank := 1
+	for rows.Next() {
+		var c TopCourier
+		c.Rank = rank
+		if err := rows.Scan(&c.Name, &c.Delivered, &c.Revenue); err != nil {
+			continue
+		}
+		couriers = append(couriers, c)
+		rank++
+	}
+
+	return couriers, nil
+}
+
+// GetAnalyticsData — хендлер: возвращает всю аналитику
+func GetAnalyticsData(c *gin.Context) {
+	var data AnalyticsData
+
+	db.DB.QueryRow("SELECT COUNT(*) FROM orders").Scan(&data.TotalOrders)
+	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'completed'").Scan(&data.Completed)
+	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'progress'").Scan(&data.InProgress)
+	db.DB.QueryRow("SELECT COUNT(*) FROM orders WHERE status = 'cancelled'").Scan(&data.Cancelled)
+
+	db.DB.QueryRow("SELECT COALESCE(SUM(delivery_cost_tenge), 0) FROM orders WHERE status = 'completed'").Scan(&data.Revenue)
+
+	var avgDays float64
+	db.DB.QueryRow(`
+		SELECT AVG(julianday(completed_at) - julianday(created_at))
+		FROM orders
+		WHERE completed_at IS NOT NULL
+	`).Scan(&avgDays)
+	if avgDays > 0 {
+		data.AvgDeliveryTime = avgDays * 24
+	}
+
+	days, err := GetOrdersByDayData()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка данных по дням"})
 		return
 	}
+	data.Days = days
 
-	layout := "2006-01-02"
-	lastDate, _ := time.Parse(layout, (*labels)[len(*labels)-1])
-
-	daysMap := make(map[string]int)
-	for i, day := range *labels {
-		daysMap[day] = (*values)[i]
+	topCouriers, err := GetTopCouriers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка топ курьеров"})
+		return
 	}
+	data.TopCouriers = topCouriers
 
-	var newLabels []string
-	var newValues []int
+	c.JSON(http.StatusOK, data)
+}
 
-	for i := 6; i >= 0; i-- {
-		targetDate := lastDate.AddDate(0, 0, -i)
-		dayStr := targetDate.Format(layout)
-		if val, exists := daysMap[dayStr]; exists {
-			newLabels = append(newLabels, dayStr)
-			newValues = append(newValues, val)
-		} else {
-			newLabels = append(newLabels, dayStr)
-			newValues = append(newValues, 0)
-		}
+// GetOrdersByDayHandler — хендлер: только для графика
+func GetOrdersByDayHandler(c *gin.Context) {
+	data, err := GetOrdersByDayData()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+		return
 	}
-
-	*labels = newLabels
-	*values = newValues
+	c.JSON(http.StatusOK, data)
 }

@@ -93,7 +93,7 @@ func main() {
 
 	// Публичная накладная (для курьера/клиента)
 	router.GET("/api/waybill/:id", handlers.WaybillHandler) // без middleware.AuthRequired()
-
+	router.StaticFile("/favicon.ico", "./static/favicon.ico")
 	// === Защищённые API маршруты ===
 	api := router.Group("/api")
 	{
@@ -101,6 +101,7 @@ func main() {
 		api.GET("/logout", middleware.AuthRequired(), handlers.LogoutHandler)
 		api.GET("/stats", middleware.AuthRequired(), handlers.StatsHandler)
 		api.GET("/orders", middleware.AuthRequired(), handlers.GetOrdersHandler)
+
 		api.POST("/orders", middleware.AuthRequired(), handlers.CreateOrderHandler)
 		api.GET("/courier/orders",
 			middleware.AuthRequired(),
@@ -136,6 +137,15 @@ func main() {
 		api.GET("/analytics/orders-by-day",
 			middleware.AuthRequired(),
 			handlers.GetOrdersByDayHandler)
+		api.GET("/analytics/data",
+			middleware.AuthRequired(),
+			handlers.GetAnalyticsData)
+		api.GET("/session", middleware.AuthRequired(), func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"role": c.GetString("user_role"),
+			})
+		})
+
 		api.GET("/admin/users",
 			middleware.AuthRequired(),
 			middleware.RoleRequired("admin"),

@@ -2,17 +2,574 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>FastAlmaty — Логистическая платформа</title>
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <!-- Chart.js -->
-    <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Google Maps -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
-    <!-- Внешний CSS -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+            --hover: rgba(255, 255, 255, 0.08);
+            --accent: #8b5cf6;
+            --telegram: #0088cc;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 280px;
+            background: rgba(30, 41, 59, 0.98);
+            backdrop-filter: blur(16px);
+            color: white;
+            padding: 24px 20px;
+            box-shadow: 4px 0 30px rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .main-content {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            background: transparent;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, #10b981, #34d399);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+        .company-name {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .company-subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .nav-menu {
+            list-style: none;
+            margin-bottom: 30px;
+        }
+        .nav-item {
+            margin-bottom: 4px;
+        }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 16px;
+            color: rgba(255, 255, 255, 0.88);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 15px;
+        }
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--hover);
+            color: white;
+            transform: translateX(4px);
+        }
+        .nav-link.active {
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .nav-icon {
+            width: 22px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .bot-status {
+            margin-top: auto;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .page-header {
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .page-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: rgb(19, 8, 8);
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        }
+        .page-subtitle {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 16px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 36px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(12px);
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: var(--accent-color);
+        }
+        .stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+        }
+        .stat-card.total { --accent-color: var(--primary); }
+        .stat-card.new { --accent-color: var(--success); }
+        .stat-card.progress { --accent-color: var(--warning); }
+        .stat-card.completed { --accent-color: var(--accent); }
+        .stat-card.primary { --accent-color: var(--primary); }
+        .stat-card.success { --accent-color: var(--success); }
+        .stat-card.warning { --accent-color: var(--warning); }
+        .stat-card.danger { --accent-color: var(--danger); }
+        .stat-card.info { --accent-color: var(--accent); }
+        .stat-card.dark { --accent-color: var(--dark); }
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .stat-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: white;
+            background: var(--accent-color);
+        }
+        .stat-number {
+            font-size: 38px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .fast-order-panel {
+            background: white;
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+            margin-bottom: 32px;
+        }
+        .fast-order-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .fast-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+        }
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 15px;
+            background: white;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .form-input:focus,
+        .form-select:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        .form-checkbox {
+            accent-color: var(--primary);
+            transform: scale(1.2);
+            margin-right: 8px;
+        }
+        .grid-2cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .action-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .input-with-button {
+            display: flex;
+            gap: 10px;
+        }
+        .input-with-button .form-input {
+            flex: 1;
+        }
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary), #2563eb);
+            color: white;
+        }
+        .btn-warning {
+            background: linear-gradient(45deg, var(--warning), #d97706);
+            color: white;
+        }
+        .btn-success {
+            background: linear-gradient(45deg, var(--success), #059669);
+            color: white;
+        }
+        .btn-danger {
+            background: linear-gradient(45deg, var(--danger), #dc2626);
+            color: white;
+        }
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .orders-section {
+            background: white;
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            min-width: 600px;
+        }
+        .orders-table th,
+        .orders-table td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .orders-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+        }
+        .orders-table td {
+            color: #666;
+        }
+        .order-id {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .status-new { background: #e8f5e8; color: #27ae60; }
+        .status-progress { background: #fff3cd; color: #f39c12; }
+        .status-completed { background: #d1ecf1; color: #17a2b8; }
+        .status-cancelled { background: #f8d7da; color: #721c24; }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .settings-section {
+            background: white;
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+        .settings-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--dark);
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .settings-hint {
+            font-size: 13px;
+            color: #777;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+        .settings-hint code {
+            background: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+        .analytics-filters {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .filter-group label {
+            font-weight: 500;
+            color: #555;
+        }
+        .analytics-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 36px;
+        }
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #777;
+            margin-bottom: 8px;
+        }
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+            position: relative;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 9999;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: opacity 0.5s ease;
+        }
+        .notification-success { background: #4CAF50; }
+        .notification-error { background: #F44336; }
+        .notification-info { background: #2196F3; }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-danger {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .badge-warning {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .badge-info {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .search-bar {
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+            font-size: 15px;
+            min-width: 250px;
+        }
+        .btn-link {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            padding: 4px;
+        }
+        .btn-link:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; }
+            .fast-form-grid, .stats-grid, .analytics-stats-grid { grid-template-columns: 1fr; }
+            .page-header, .action-row, .header-actions { flex-direction: column; align-items: stretch; }
+            .search-bar { width: 100%; }
+            .analytics-filters { flex-direction: column; }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -25,14 +582,30 @@
                 </div>
             </div>
             <ul class="nav-menu">
-                <li class="nav-item"><a href="#" class="nav-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i> Дашборд</a></li>
-                <li class="nav-item"><a href="#" class="nav-link" data-page="new-order"><i class="fas fa-plus-circle"></i> Новый заказ</a></li>
-                <li class="nav-item"><a href="#" class="nav-link" data-page="orders"><i class="fas fa-boxes"></i> Заказы</a></li>
-                <li class="nav-item"><a href="#" class="nav-link" data-page="analytics"><i class="fas fa-chart-line"></i> Аналитика</a></li>
-                <li class="nav-item"><a href="#" class="nav-link" data-page="courier"><i class="fas fa-bicycle"></i> Курьер</a></li>
-                <li class="nav-item"><a href="#" class="nav-link" data-page="clients"><i class="fas fa-users"></i> CRM</a></li>
-                <li class="nav-item"><a href="#" class="nav-link" data-page="settings"><i class="fas fa-cog"></i> Настройки</a></li>
-                <li class="nav-item"><a href="#" class="nav-link" data-page="admin"><i class="fas fa-users-cog"></i> Админ</a></li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-page="dashboard"><i class="fas fa-tachometer-alt nav-icon"></i> Дашборд</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="new-order"><i class="fas fa-plus-circle nav-icon"></i> Новый заказ</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="orders"><i class="fas fa-boxes nav-icon"></i> Заказы</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="analytics"><i class="fas fa-chart-line nav-icon"></i> Аналитика</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="courier"><i class="fas fa-bicycle nav-icon"></i> Курьер</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="clients"><i class="fas fa-users nav-icon"></i> CRM</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="settings"><i class="fas fa-cog nav-icon"></i> Настройки</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="admin"><i class="fas fa-users-cog nav-icon"></i> Админ</a>
+                </li>
             </ul>
             <div class="bot-status">
                 <div class="status-indicator"></div>
@@ -42,13 +615,11 @@
                 </div>
             </div>
         </nav>
-
         <main class="main-content">
-            <!-- =============== ДАШБОРД =============== -->
             <div id="dashboard" class="page active">
                 <div class="page-header">
                     <h1 class="page-title">📊 Дашборд</h1>
-                    <button class="btn btn-primary" onclick="updateStats()">🔄 Обновить</button>
+                    <button class="btn btn-primary" onclick="updateStats()"><i class="fas fa-sync-alt"></i> Обновить</button>
                 </div>
                 <div class="stats-grid">
                     <div class="stat-card total">
@@ -83,7 +654,7 @@
                 <div class="orders-section">
                     <div class="section-header">
                         <h2 class="section-title">Последние заказы</h2>
-                        <a href="#" class="btn btn-primary" onclick="showPage('orders')">📋 Все</a>
+                        <a href="#" class="btn btn-primary" onclick="showPage('orders')"><i class="fas fa-list"></i> Все</a>
                     </div>
                     <table class="orders-table">
                         <thead>
@@ -99,12 +670,12 @@
                     </table>
                 </div>
             </div>
-
-            <!-- =============== НОВЫЙ ЗАКАЗ =============== -->
             <div id="new-order" class="page">
                 <div class="page-header">
                     <h1 class="page-title">➕ Новый заказ</h1>
-                    <button class="btn btn-primary" onclick="showPage('dashboard')">← Назад</button>
+                    <button class="btn btn-primary" onclick="showPage('dashboard')">
+                        <i class="fas fa-arrow-left"></i> Назад
+                    </button>
                 </div>
                 <div class="fast-order-panel">
                     <div class="fast-order-title">⚡ Быстрое создание заказа</div>
@@ -112,24 +683,24 @@
                         <div class="fast-form-grid">
                             <div class="form-group">
                                 <label>👤 Отправитель</label>
-                                <input type="text" class="form-input" placeholder="Имя" id="sender-name">
-                                <input type="tel" class="form-input" placeholder="Телефон" id="sender-phone">
+                                <input type="text" class="form-input" placeholder="Имя" id="sender-name" />
+                                <input type="tel" class="form-input" placeholder="Телефон" id="sender-phone" />
                                 <textarea class="form-input" placeholder="Адрес забора" id="sender-address" rows="2"></textarea>
                             </div>
                             <div class="form-group">
                                 <label>👥 Получатель</label>
-                                <input type="text" class="form-input" placeholder="Имя" id="receiver-name" required>
-                                <input type="tel" class="form-input" placeholder="Телефон" id="receiver-phone" required>
+                                <input type="text" class="form-input" placeholder="Имя" id="receiver-name" required />
+                                <input type="tel" class="form-input" placeholder="Телефон" id="receiver-phone" required />
                                 <textarea class="form-input" placeholder="Адрес доставки" id="receiver-address" rows="2" required></textarea>
                             </div>
                         </div>
                         <div class="fast-form-grid">
                             <div class="form-group">
                                 <label>📦 Товар</label>
-                                <input type="text" class="form-input" placeholder="Описание" id="product-desc">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                    <input type="number" class="form-input" placeholder="Вес (кг)" id="weight" step="0.1">
-                                    <input type="number" class="form-input" placeholder="Объем (л)" id="volume" step="0.1">
+                                <input type="text" class="form-input" placeholder="Описание" id="product-desc" />
+                                <div class="grid-2cols">
+                                    <input type="number" class="form-input" placeholder="Вес (кг)" id="weight" step="0.1" />
+                                    <input type="number" class="form-input" placeholder="Объем (л)" id="volume" step="0.1" />
                                 </div>
                             </div>
                             <div class="form-group">
@@ -139,63 +710,150 @@
                                     <option value="card">Карта</option>
                                     <option value="online">Онлайн</option>
                                 </select>
-                                <input type="number" class="form-input" placeholder="Стоимость доставки (₸)" id="delivery-cost" value="500">
+                                <input type="number" class="form-input" placeholder="Стоимость доставки (₸)" id="delivery-cost" value="500" />
                             </div>
                         </div>
                         <div class="action-row">
-                            <button type="button" class="btn btn-warning btn-sm" onclick="resetForm()">🗑️ Очистить</button>
-                            <button type="button" class="btn btn-primary" onclick="submitFastOrder()">✅ Создать</button>
+                            <button type="button" class="btn btn-warning btn-sm" onclick="resetForm()">
+                                <i class="fas fa-trash-alt"></i> Очистить
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="submitFastOrder()">
+                                <i class="fas fa-check"></i> Создать
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
-
-            <!-- =============== ВСЕ ЗАКАЗЫ =============== -->
             <div id="orders" class="page">
                 <div class="page-header">
                     <h1 class="page-title">📦 Все заказы</h1>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" class="search-bar" placeholder="Поиск..." id="search-input" oninput="searchOrders()">
-                        <button class="btn btn-success" onclick="showPage('new-order')">➕ Новый</button>
+                    <div class="header-actions">
+                        <input type="text" class="search-bar" placeholder="Поиск..." id="search-input" oninput="searchOrders()" />
+                        <button class="btn btn-success" onclick="showPage('new-order')"><i class="fas fa-plus"></i> Новый</button>
                     </div>
                 </div>
                 <div class="orders-section">
+                    <div class="table-responsive">
+                        <table class="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Получатель</th>
+                                    <th>Адрес</th>
+                                    <th>Статус</th>
+                                    <th>Дата</th>
+                                    <th class="text-right">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="all-orders"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div id="analytics" class="page">
+                <div class="page-header">
+                    <h1 class="page-title">📊 Аналитика и отчётность</h1>
+                    <button class="btn btn-primary" onclick="showPage('dashboard')"><i class="fas fa-arrow-left"></i> Назад</button>
+                </div>
+                <div class="analytics-filters">
+                    <div class="filter-group">
+                        <label>Период</label>
+                        <select id="period-filter" onchange="applyAnalyticsFilters()">
+                            <option value="7">Последние 7 дней</option>
+                            <option value="30" selected>Последние 30 дней</option>
+                            <option value="90">Последние 3 месяца</option>
+                            <option value="365">Год</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Статус</label>
+                        <select id="status-filter" onchange="applyAnalyticsFilters()">
+                            <option value="all" selected>Все статусы</option>
+                            <option value="completed">Доставлены</option>
+                            <option value="progress">В пути</option>
+                            <option value="new">Новые</option>
+                            <option value="cancelled">Отменены</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="analytics-stats-grid">
+                    <div class="stat-card primary">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Всего заказов</div>
+                            <div class="stat-number" id="total-orders-stat">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Доставлено</div>
+                            <div class="stat-number" id="completed-orders-stat">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-icon">🚚</div>
+                        <div class="stat-info">
+                            <div class="stat-label">В пути</div>
+                            <div class="stat-number" id="in-progress-stat">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="stat-icon">❌</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Отменено</div>
+                            <div class="stat-number" id="cancelled-orders-stat">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-icon">₸</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Выручка</div>
+                            <div class="stat-number" id="revenue-stat">0 ₸</div>
+                        </div>
+                    </div>
+                    <div class="stat-card dark">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Среднее время</div>
+                            <div class="stat-number" id="avg-delivery-time">0 ч</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="orders-section">
+                    <div class="section-header">
+                        <h2 class="section-title">📅 Активность по дням</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="orders-by-day"></canvas>
+                    </div>
+                </div>
+                <div class="orders-section">
+                    <div class="section-header">
+                        <h2 class="section-title">🏆 Топ курьеров</h2>
+                    </div>
                     <table class="orders-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Получатель</th>
-                                <th>Адрес</th>
-                                <th>Статус</th>
-                                <th>Дата</th>
+                                <th>#</th>
+                                <th>Курьер</th>
+                                <th>Доставлено</th>
+                                <th>Выручка</th>
                             </tr>
                         </thead>
-                        <tbody id="all-orders"></tbody>
+                        <tbody id="top-couriers-list"></tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- =============== АНАЛИТИКА =============== -->
-            <div id="analytics" class="page">
-                <div class="page-header">
-                    <h1 class="page-title">📈 Аналитика</h1>
-                    <button class="btn btn-primary" onclick="showPage('dashboard')">← Назад</button>
-                </div>
-                <div class="orders-section">
-                    <canvas id="ordersChart" height="100"></canvas>
-                </div>
-            </div>
-
-            <!-- =============== КУРЬЕР =============== -->
             <div id="courier" class="page">
                 <div class="page-header">
                     <h1 class="page-title">🚴 Курьер</h1>
-                    <button class="btn btn-primary" onclick="showPage('dashboard')">← Назад</button>
+                    <button class="btn btn-primary" onclick="showPage('dashboard')"><i class="fas fa-arrow-left"></i> Назад</button>
                 </div>
                 <div class="orders-section">
                     <div class="section-header">
                         <h2 class="section-title">Заказы в пути</h2>
-                        <button class="btn btn-success" onclick="loadCourierOrders()">🔄</button>
+                        <button class="btn btn-success" onclick="loadCourierOrders()"><i class="fas fa-sync-alt"></i></button>
                     </div>
                     <table class="orders-table">
                         <thead>
@@ -211,15 +869,13 @@
                     </table>
                 </div>
             </div>
-
-            <!-- =============== CRM =============== -->
             <div id="clients" class="page">
                 <div class="page-header">
                     <h1 class="page-title">🧑‍💼 CRM Клиенты</h1>
-                    <button class="btn btn-primary" onclick="showPage('dashboard')">← Назад</button>
+                    <button class="btn btn-primary" onclick="showPage('dashboard')"><i class="fas fa-arrow-left"></i> Назад</button>
                 </div>
                 <div class="orders-section">
-                    <input type="text" placeholder="Поиск по телефону..." class="form-input" id="client-search" oninput="searchClient()">
+                    <input type="text" placeholder="Поиск по телефону..." class="form-input" id="client-search" oninput="searchClient()" />
                     <table class="orders-table">
                         <thead>
                             <tr>
@@ -233,30 +889,76 @@
                     </table>
                 </div>
             </div>
-
-            <!-- =============== НАСТРОЙКИ =============== -->
             <div id="settings" class="page">
                 <div class="page-header">
-                    <h1 class="page-title">⚙️ Настройки</h1>
-                    <button class="btn btn-primary" onclick="saveSettings()">💾 Сохранить</button>
+                    <h1 class="page-title">⚙️ Настройки системы</h1>
+                    <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Сохранить</button>
                 </div>
-                <div class="orders-section">
-                    <label>Название компании</label>
-                    <input type="text" class="form-input" id="setting-company_name">
-                    <label>Стоимость доставки (₸)</label>
-                    <input type="number" class="form-input" id="setting-delivery_price">
-                    <label>API Ключ</label>
-                    <input type="text" class="form-input" id="setting-api_key" disabled>
+                <div class="settings-grid">
+                    <div class="settings-section">
+                        <h3 class="settings-title">🏢 Общие настройки</h3>
+                        <div class="form-group">
+                            <label for="setting-company_name">Название компании</label>
+                            <input type="text" class="form-input" id="setting-company_name" placeholder="FastAlmaty">
+                        </div>
+                        <div class="form-group">
+                            <label for="setting-delivery_price">Стоимость доставки (₸)</label>
+                            <input type="number" class="form-input" id="setting-delivery_price" placeholder="500">
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3 class="settings-title">🔑 API Интеграции</h3>
+                        <div class="form-group">
+                            <label for="setting-api_key">API Ключ</label>
+                            <div class="input-with-button">
+                                <input type="text" class="form-input" id="setting-api_key" placeholder="Сгенерирован автоматически" disabled>
+                                <button class="btn btn-warning btn-sm" onclick="copyApiKey(document.getElementById('setting-api_key').value)">
+                                    <i class="fas fa-copy"></i> Копировать
+                                </button>
+                            </div>
+                        </div>
+                        <p class="settings-hint">Используется для интеграции с внешними сервисами</p>
+                    </div>
+                    <div class="settings-section">
+                        <h3 class="settings-title">🔔 Уведомления</h3>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="setting-sms_notifications" class="form-checkbox">
+                                Отправлять SMS клиенту при изменении статуса
+                            </label>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3 class="settings-title">📱 Telegram Уведомления</h3>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="setting-telegram_notifications" class="form-checkbox">
+                                Отправлять уведомления в Telegram
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>Bot Token</label>
+                            <input type="text" class="form-input" id="setting-telegram_bot_token" placeholder="7391234567:AAHdJk1lMnOpQrStUvWxYzAbCdEfGhIjKlM">
+                        </div>
+                        <div class="form-group">
+                            <label>Chat ID</label>
+                            <input type="text" class="form-input" id="setting-telegram_chat_id" placeholder="123456789">
+                        </div>
+                        <p class="settings-hint">
+                            Как настроить:<br>
+                            1. Создайте бота через @BotFather<br>
+                            2. Напишите боту любое сообщение<br>
+                            3. Перейдите: <code>api.telegram.org/botTOKEN/getUpdates</code><br>
+                            4. Найдите <code>"chat":{"id":123456789}</code>
+                        </p>
+                    </div>
                 </div>
             </div>
-
-            <!-- =============== АДМИН-ПАНЕЛЬ =============== -->
             <div id="admin" class="page">
                 <div class="page-header">
                     <h1 class="page-title">🔐 Админ-панель</h1>
-                    <button class="btn btn-primary" onclick="showPage('dashboard')">← Назад</button>
+                    <button class="btn btn-primary" onclick="showPage('dashboard')"><i class="fas fa-arrow-left"></i> Назад</button>
                 </div>
-
                 <div class="stats-grid">
                     <div class="stat-card total">
                         <div class="stat-header">
@@ -273,12 +975,10 @@
                         <div class="stat-number" id="admin-api-key-count">0</div>
                     </div>
                 </div>
-
-                <!-- Управление пользователями -->
                 <div class="orders-section">
                     <div class="section-header">
                         <h2 class="section-title">Пользователи системы</h2>
-                        <button class="btn btn-success btn-sm" onclick="openAddUserModal()">➕ Добавить</button>
+                        <button class="btn btn-success btn-sm" onclick="openAddUserModal()"><i class="fas fa-plus"></i> Добавить</button>
                     </div>
                     <table class="orders-table" id="admin-users">
                         <thead>
@@ -292,12 +992,10 @@
                         <tbody></tbody>
                     </table>
                 </div>
-
-                <!-- Управление API-ключами -->
                 <div class="orders-section" style="margin-top: 30px;">
                     <div class="section-header">
                         <h2 class="section-title">API Ключи</h2>
-                        <button class="btn btn-warning btn-sm" onclick="generateApiKey()">➕ Сгенерировать</button>
+                        <button class="btn btn-warning btn-sm" onclick="generateApiKey()"><i class="fas fa-plus"></i> Сгенерировать</button>
                     </div>
                     <table class="orders-table" id="admin-api-keys">
                         <thead>
@@ -311,25 +1009,23 @@
                     </table>
                 </div>
             </div>
-
-            <!-- =============== МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯ =============== -->
-            <div id="addUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-                <div style="background: white; padding: 24px; border-radius: 12px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <div id="addUserModal" class="modal-overlay">
+                <div class="modal-content">
                     <h3>Добавить пользователя</h3>
                     <form id="addUserForm">
-                        <div style="margin-bottom: 12px;">
+                        <div class="form-group">
                             <label>Логин</label>
-                            <input type="text" class="form-input" name="username" required>
+                            <input type="text" class="form-input" name="username" required />
                         </div>
-                        <div style="margin-bottom: 12px;">
+                        <div class="form-group">
                             <label>Пароль</label>
-                            <input type="password" class="form-input" name="password" required>
+                            <input type="password" class="form-input" name="password" required />
                         </div>
-                        <div style="margin-bottom: 12px;">
+                        <div class="form-group">
                             <label>Имя</label>
-                            <input type="text" class="form-input" name="name" required>
+                            <input type="text" class="form-input" name="name" required />
                         </div>
-                        <div style="margin-bottom: 12px;">
+                        <div class="form-group">
                             <label>Роль</label>
                             <select class="form-select" name="role" required>
                                 <option value="admin">Администратор</option>
@@ -337,17 +1033,605 @@
                                 <option value="courier">Курьер</option>
                             </select>
                         </div>
-                        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px;">
-                            <button type="button" class="btn btn-danger btn-sm" onclick="closeAddUserModal()">Отмена</button>
-                            <button type="submit" class="btn btn-primary btn-sm">Создать</button>
+                        <div class="action-row">
+                            <button type="button" class="btn btn-danger btn-sm" onclick="closeAddUserModal()"><i class="fas fa-times"></i> Отмена</button>
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-user-plus"></i> Создать</button>
                         </div>
                     </form>
                 </div>
             </div>
         </main>
     </div>
+    <script>
+        let ordersChart = null;
+        let apiKeys = [];
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const page = document.getElementById(pageId);
+            if (!page) {
+                loadPage(pageId);
+                return;
+            }
+            page.classList.add('active');
+            onPageLoad(pageId);
+        }
+        function onPageLoad(pageId) {
+            switch (pageId) {
+                case 'dashboard': updateStats(); break;
+                case 'orders': loadAllOrders(); break;
+                case 'courier': loadCourierOrders(); break;
+                case 'settings': loadSettings(); break;
+                case 'admin': loadAdminPanel(); break;
+                case 'analytics': initAnalytics(); break;
+                case 'new-order': initNewOrderForm(); break;
+                case 'clients': searchClient(); break;
+            }
+        }
+        async function loadPage(pageId) {
+            try {
+                const res = await fetch(`/templates/${pageId}.html`);
+                if (!res.ok) throw new Error('Страница не найдена');
+                const container = document.querySelector('.main-content');
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = await res.text();
+                const newPage = tempDiv.firstElementChild;
+                newPage.id = pageId;
+                newPage.classList.add('page', 'active');
+                container.appendChild(newPage);
+                onPageLoad(pageId);
+            } catch (err) {
+                console.error('Ошибка загрузки страницы:', err);
+                showNotification('Ошибка загрузки страницы: ' + err.message, 'error');
+            }
+        }
+        async function updateStats() {
+            try {
+                const res = await fetch('/api/stats');
+                if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
+                const stats = await res.json();
+                document.getElementById('total-orders').textContent = stats.total || 0;
+                document.getElementById('new-orders').textContent = stats.new || 0;
+                document.getElementById('progress-orders').textContent = stats.progress || 0;
+                document.getElementById('completed-orders').textContent = stats.completed || 0;
+                loadRecentOrders();
+            } catch (err) {
+                console.error('Ошибка статистики:', err);
+                showNotification('Ошибка загрузки статистики', 'error');
+            }
+        }
+        async function loadRecentOrders() {
+            try {
+                const res = await fetch('/api/orders?limit=5');
+                const data = await res.json();
+                const orders = Array.isArray(data) ? data : data.orders || [];
+                const tbody = document.getElementById('recent-orders');
+                if (!tbody) return;
+                tbody.innerHTML = orders.length === 0
+                    ? '<tr><td colspan="5" class="text-center">Нет заказов</td></tr>'
+                    : orders.map(o => `
+                        <tr>
+                            <td class="order-id">#${o.id || ''}</td>
+                            <td>${o.receiver_name || '—'}</td>
+                            <td>${o.receiver_address || '—'}</td>
+                            <td><span class="status-badge status-${o.status || 'new'}">${getStatusText(o.status)}</span></td>
+                            <td>${o.delivery_cost_tenge || 0} ₸</td>
+                        </tr>
+                    `).join('');
+            } catch (err) {
+                console.error('Ошибка загрузки последних заказов:', err);
+            }
+        }
+        function initNewOrderForm() {
+            const phone = document.getElementById('receiver-phone');
+            if (!phone) return;
+            phone.addEventListener('blur', async () => {
+                const val = phone.value.trim();
+                if (val.length < 10) return;
+                try {
+                    const res = await fetch(`/api/clients/search?phone=${encodeURIComponent(val)}`);
+                    if (!res.ok) return;
+                    const clients = await res.json();
+                    if (Array.isArray(clients) && clients.length > 0) {
+                        const c = clients[0];
+                        document.getElementById('receiver-name').value = c.name;
+                        document.getElementById('receiver-address').value = c.address;
+                        showNotification('Клиент найден', 'success');
+                    }
+                } catch (err) {
+                    console.warn('Автозаполнение:', err);
+                }
+            });
+        }
+        function resetForm() {
+            const form = document.getElementById('fast-order-form');
+            if (form) form.reset();
+            showNotification('Форма очищена', 'info');
+        }
+        async function submitFastOrder() {
+            const data = {
+                sender_name: document.getElementById('sender-name').value,
+                sender_phone: document.getElementById('sender-phone').value,
+                sender_address: document.getElementById('sender-address').value,
+                receiver_name: document.getElementById('receiver-name').value,
+                receiver_phone: document.getElementById('receiver-phone').value,
+                receiver_address: document.getElementById('receiver-address').value,
+                description: document.getElementById('product-desc').value,
+                weight_kg: parseFloat(document.getElementById('weight').value) || 0,
+                volume_l: parseFloat(document.getElementById('volume').value) || 0,
+                delivery_cost_tenge: parseFloat(document.getElementById('delivery-cost').value) || 0,
+                payment_method: document.getElementById('payment-method').value
+            };
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || 'Ошибка создания заказа');
+                showNotification('Заказ создан', 'success');
+                resetForm();
+                showPage('dashboard');
+            } catch (err) {
+                showNotification('Ошибка: ' + err.message, 'error');
+            }
+        }
+        async function loadAllOrders() {
+            try {
+                const res = await fetch('/api/orders');
+                const data = await res.json();
+                const orders = Array.isArray(data) ? data : data.orders || [];
+                const tbody = document.getElementById('all-orders');
+                if (!tbody) return;
+                tbody.innerHTML = orders.length === 0
+                    ? '<tr><td colspan="6" class="text-center">Нет заказов</td></tr>'
+                    : orders.map(o => `
+                        <tr>
+                            <td class="order-id">#${o.id}</td>
+                            <td>${o.receiver_name}</td>
+                            <td>${o.receiver_address}</td>
+                            <td><span class="status-badge status-${o.status}">${getStatusText(o.status)}</span></td>
+                            <td>${formatDate(o.created_at)}</td>
+                            <td class="text-right">
+                                <button class="btn btn-warning btn-sm" onclick="generateWaybill('${o.id}')">
+                                    <i class="fas fa-print"></i> PDF
+                                </button>
+                                ${getChangeStatusButton(o.id, o.status)}
+                            </td>
+                        </tr>
+                    `).join('');
+            } catch (err) {
+                showNotification('Ошибка загрузки заказов', 'error');
+            }
+        }
+        function getChangeStatusButton(orderId, currentStatus) {
+            // Проверяем роль пользователя (предполагается, что она хранится в sessionStorage или передается через API)
+            const userRole = sessionStorage.getItem('user_role') || 'courier';
+            if (userRole !== 'admin' && userRole !== 'manager') {
+                return ''; // Если не админ и не менеджер, кнопка не показывается
+            }
 
-    <!-- Подключаем JS -->
-    <script src="/static/js/app.js"></script>
+            const statusOptions = [
+                { value: 'new', label: 'НОВЫЙ', color: 'success' },
+                { value: 'progress', label: 'В ПУТИ', color: 'warning' },
+                { value: 'completed', label: 'ДОСТАВЛЕНО', color: 'success' },
+                { value: 'cancelled', label: 'ОТМЕНИТЬ', color: 'danger' }
+            ];
+
+            // Формируем строку с кнопкой выбора статуса
+            return `<div class="dropdown">
+                        <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Изменить статус
+                        </button>
+                        <ul class="dropdown-menu">
+                            ${statusOptions.map(option => `
+                                <li><button class="dropdown-item" onclick="changeOrderStatus('${orderId}', '${option.value}')">${option.label}</button></li>
+                            `).join('')}
+                        </ul>
+                    </div>`;
+        }
+        async function changeOrderStatus(orderId, newStatus) {
+            try {
+                const res = await fetch(`/api/order/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.error || 'Ошибка изменения статуса');
+                }
+                showNotification('Статус изменён', 'success');
+                loadAllOrders(); // Обновляем список заказов
+            } catch (err) {
+                showNotification('Ошибка: ' + err.message, 'error');
+            }
+        }
+        function searchOrders() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const rows = document.querySelectorAll('#all-orders tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+        async function loadCourierOrders() {
+            try {
+                const res = await fetch('/api/courier/orders');
+                const data = await res.json();
+                const orders = Array.isArray(data) ? data : data.orders || [];
+                const tbody = document.getElementById('courier-orders');
+                tbody.innerHTML = orders.length === 0
+                    ? '<tr><td colspan="5" class="text-center">Нет заказов</td></tr>'
+                    : orders.map(o => `
+                        <tr>
+                            <td>#${o.id}</td>
+                            <td>${o.receiver_name}</td>
+                            <td>${o.receiver_address}</td>
+                            <td><span class="status-badge status-${o.status}">${getStatusText(o.status)}</span></td>
+                            <td><button class="btn btn-success btn-sm" onclick="confirmOrder('${o.id}')"><i class="fas fa-check"></i></button></td>
+                        </tr>
+                    `).join('');
+            } catch (err) {
+                showNotification('Ошибка загрузки заказов курьера', 'error');
+            }
+        }
+        async function searchClient() {
+            const phone = document.getElementById('client-search').value;
+            if (phone.length < 3) return;
+            try {
+                const res = await fetch(`/api/clients/search?phone=${encodeURIComponent(phone)}`);
+                const clients = await res.json();
+                const tbody = document.getElementById('clients-list');
+                tbody.innerHTML = Array.isArray(clients) ? clients.map(c => `
+                    <tr>
+                        <td>${c.name || '—'}</td>
+                        <td>${c.phone || '—'}</td>
+                        <td>${c.address || '—'}</td>
+                        <td>${c.total_orders || 0}</td>
+                    </tr>
+                `).join('') : '';
+            } catch (err) {
+                showNotification('Ошибка поиска', 'error');
+            }
+        }
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
+                const settings = await res.json();
+                document.getElementById('setting-company_name').value = settings.company_name || '';
+                document.getElementById('setting-delivery_price').value = settings.delivery_price || '';
+                document.getElementById('setting-telegram_bot_token').value = settings.telegram_bot_token || '';
+                document.getElementById('setting-telegram_chat_id').value = settings.telegram_chat_id || '';
+                const telegramCheck = document.getElementById('setting-telegram_notifications');
+                if (telegramCheck) telegramCheck.checked = settings.telegram_notifications;
+                const smsCheck = document.getElementById('setting-sms_notifications');
+                if (smsCheck) smsCheck.checked = settings.sms_notifications;
+                document.getElementById('setting-api_key').value = settings.api_key || 'Не сгенерирован';
+            } catch (err) {
+                console.error('Ошибка загрузки настроек:', err);
+                showNotification('Ошибка: ' + err.message, 'error');
+            }
+        }
+        async function saveSettings() {
+            const settings = {
+                company_name: document.getElementById('setting-company_name').value,
+                delivery_price: parseInt(document.getElementById('setting-delivery_price').value) || 500,
+                sms_notifications: !!document.getElementById('setting-sms_notifications')?.checked,
+                telegram_notifications: !!document.getElementById('setting-telegram_notifications')?.checked,
+                telegram_bot_token: document.getElementById('setting-telegram_bot_token').value,
+                telegram_chat_id: document.getElementById('setting-telegram_chat_id').value
+            };
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                if (!res.ok) {
+                    const error = await res.json().catch(() => ({ error: 'Неизвестная ошибка' }));
+                    throw new Error(error.error || 'Ошибка сохранения');
+                }
+                showNotification('✅ Настройки сохранены', 'success');
+            } catch (err) {
+                console.error('Ошибка сохранения:', err);
+                showNotification('Ошибка: ' + err.message, 'error');
+            }
+        }
+        async function initAnalytics() {
+            await loadAnalyticsData();
+            initCharts();
+        }
+        async function loadAnalyticsData() {
+            try {
+                const res = await fetch('/api/analytics/data');
+                if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
+                const data = await res.json();
+                document.getElementById('total-orders-stat').textContent = data.total_orders || 0;
+                document.getElementById('completed-orders-stat').textContent = data.completed || 0;
+                document.getElementById('in-progress-stat').textContent = data.in_progress || 0;
+                document.getElementById('cancelled-orders-stat').textContent = data.cancelled || 0;
+                document.getElementById('revenue-stat').textContent = (data.revenue || 0).toLocaleString() + ' ₸';
+                document.getElementById('avg-delivery-time').textContent = (data.avg_delivery_time || 0).toFixed(1) + ' ч';
+                if (ordersChart && data.days) {
+                    ordersChart.data.labels = data.days.map(d => d.date);
+                    ordersChart.data.datasets[0].data = data.days.map(d => d.count);
+                    ordersChart.update();
+                }
+                const tbody = document.getElementById('top-couriers-list');
+                if (tbody && data.top_couriers) {
+                    tbody.innerHTML = data.top_couriers.map(c => `
+                        <tr>
+                            <td>${c.rank}</td>
+                            <td>${c.name || '—'}</td>
+                            <td>${c.delivered}</td>
+                            <td>${c.revenue} ₸</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Ошибка аналитики:', err);
+                showNotification('Ошибка загрузки аналитики', 'error');
+            }
+        }
+        function initCharts() {
+            const ctx = document.getElementById('orders-by-day');
+            if (ctx && !ordersChart) {
+                const parent = ctx.parentElement;
+                const canvas = document.createElement('canvas');
+                canvas.id = 'orders-by-day';
+                parent.replaceChild(canvas, ctx);
+                ordersChart = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Заказы',
+                            data: [],
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            }
+        }
+        function generateWaybill(id) {
+            window.open(`/api/waybill/${id}`, '_blank');
+        }
+        async function confirmOrder(id) {
+            const res = await fetch(`/api/order/${id}/confirm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'accept' })
+            });
+            if (res.ok) {
+                showNotification('Заказ доставлен!', 'success');
+                loadCourierOrders();
+            } else {
+                const data = await res.json();
+                showNotification('Ошибка: ' + (data.error || 'Не удалось подтвердить заказ'), 'error');
+            }
+        }
+        function deleteUser(id, username) {
+            if (!confirm(`Удалить "${username}"?`)) return;
+            fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification('Ошибка: ' + data.error, 'error');
+                    return;
+                }
+                showNotification('Удалён', 'success');
+                loadAdminUsers();
+            })
+            .catch(err => {
+                console.error('Ошибка удаления:', err);
+                showNotification('Ошибка сети', 'error');
+            });
+        }
+        function getRoleBadge(role) {
+            const badges = {
+                admin: '<span class="badge badge-danger">Админ</span>',
+                manager: '<span class="badge badge-warning">Менеджер</span>',
+                courier: '<span class="badge badge-info">Курьер</span>'
+            };
+            return badges[role] || `<span class="badge">${role}</span>`;
+        }
+        function getStatusText(status) {
+            const map = {
+                new: 'Новый',
+                progress: 'В пути',
+                completed: 'Доставлен',
+                cancelled: 'Отменён'
+            };
+            return map[status] || status;
+        }
+        function formatDate(dateString) {
+            if (!dateString) return '—';
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+        }
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            Object.assign(notification.style, {
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                padding: '15px 20px',
+                borderRadius: '8px',
+                color: 'white',
+                zIndex: '9999',
+                maxWidth: '300px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                backgroundColor: {
+                    success: '#4CAF50',
+                    error: '#F44336',
+                    info: '#2196F3'
+                }[type] || '#2196F3',
+                transition: 'opacity 0.5s ease'
+            });
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => document.body.removeChild(notification), 500);
+            }, 5000);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-page]').forEach(link => {
+                link.addEventListener('click', e => {
+                    e.preventDefault();
+                    const target = e.target.closest('[data-page]');
+                    if (!target) return;
+                    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+                    target.classList.add('active');
+                    showPage(target.dataset.page);
+                });
+            });
+            window.openAddUserModal = function() {
+                const modal = document.getElementById('addUserModal');
+                if (modal) modal.style.display = 'flex';
+            };
+            window.closeAddUserModal = function() {
+                const modal = document.getElementById('addUserModal');
+                const form = document.getElementById('addUserForm');
+                if (modal) modal.style.display = 'none';
+                if (form) form.reset();
+            };
+            const form = document.getElementById('addUserForm');
+            if (form) {
+                form.addEventListener('submit', async e => {
+                    e.preventDefault();
+                    const data = {
+                        username: form.username.value,
+                        password: form.password.value,
+                        name: form.name.value,
+                        role: form.role.value
+                    };
+                    try {
+                        const res = await fetch('/api/admin/users', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        const result = await res.json();
+                        if (!res.ok) throw new Error(result.error);
+                        showNotification('Пользователь создан', 'success');
+                        closeAddUserModal();
+                        loadAdminUsers();
+                    } catch (err) {
+                        showNotification('Ошибка: ' + err.message, 'error');
+                    }
+                });
+            }
+            showPage('dashboard');
+        });
+        async function loadAdminPanel() {
+            await loadAdminUsers();
+            await loadAdminApiKeys();
+        }
+        async function loadAdminUsers() {
+            try {
+                const res = await fetch('/api/admin/users');
+                const data = await res.json();
+                const users = Array.isArray(data.users) ? data.users : [];
+                const tbody = document.querySelector('#admin-users tbody');
+                if (!tbody) return;
+                tbody.innerHTML = users.map(u => `
+                    <tr>
+                        <td>${u.username}</td>
+                        <td>${u.name}</td>
+                        <td>${getRoleBadge(u.role)}</td>
+                        <td><button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id}, '${u.username}')"><i class="fas fa-trash"></i></button></td>
+                    </tr>
+                `).join('');
+                document.getElementById('admin-user-count').textContent = users.length;
+            } catch (err) {
+                console.error('Ошибка загрузки пользователей:', err);
+                showNotification('Ошибка загрузки', 'error');
+            }
+        }
+        async function loadAdminApiKeys() {
+            try {
+                const res = await fetch('/api/admin/api-keys');
+                const data = await res.json();
+                const keys = Array.isArray(data.api_keys) ? data.api_keys : [];
+                const tbody = document.querySelector('#admin-api-keys tbody');
+                if (!tbody) return;
+                tbody.innerHTML = keys.map(k => `
+                    <tr>
+                        <td>
+                            <code>${k.key.slice(0, 8)}...${k.key.slice(-8)}</code>
+                            <button class="btn btn-sm btn-link" onclick="copyApiKey('${k.key}')"><i class="fas fa-copy"></i></button>
+                        </td>
+                        <td>${formatDate(k.created_at)}</td>
+                        <td><button class="btn btn-danger btn-sm" onclick="revokeApiKey(${k.id})"><i class="fas fa-times"></i></button></td>
+                    </tr>
+                `).join('');
+                document.getElementById('admin-api-key-count').textContent = keys.length;
+            } catch (err) {
+                console.error('Ошибка загрузки ключей:', err);
+                showNotification('Ошибка загрузки', 'error');
+            }
+        }
+        function generateApiKey() {
+            fetch('/api/admin/generate-api-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification('Ошибка: ' + data.error, 'error');
+                    return;
+                }
+                showNotification(`Ключ: ${data.key}`, 'success');
+                loadAdminApiKeys();
+            })
+            .catch(err => {
+                console.error('Ошибка генерации:', err);
+                showNotification('Ошибка сети', 'error');
+            });
+        }
+        function copyApiKey(key) {
+            if (!key) {
+                showNotification('Ключ пустой', 'error');
+                return;
+            }
+            navigator.clipboard.writeText(key)
+                .then(() => showNotification('Скопировано', 'success'))
+                .catch(() => showNotification('Не удалось скопировать', 'error'));
+        }
+        function revokeApiKey(id) {
+            if (!confirm('Отозвать ключ?')) return;
+            fetch(`/api/admin/revoke-api-key?id=${id}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification('Ошибка: ' + data.error, 'error');
+                    return;
+                }
+                showNotification('Отозван', 'success');
+                loadAdminApiKeys();
+            })
+            .catch(err => {
+                console.error('Ошибка отзыва:', err);
+                showNotification('Ошибка сети', 'error');
+            });
+        }
+        function applyAnalyticsFilters() {
+            showNotification('Фильтры применены', 'info');
+        }
+    </script>
 </body>
 </html>

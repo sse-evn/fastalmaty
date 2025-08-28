@@ -4,8 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Отслеживание заказов — FastAlmaty</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Предполагается, что основные стили находятся в /static/css/style.css -->
+    <!-- <link rel="stylesheet" href="/static/css/style.css"> -->
     <style>
+        /* Встроенные стили для автономности этой страницы */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
         .track-container {
             max-width: 600px;
             margin: 60px auto;
@@ -14,12 +22,11 @@
             border-radius: 16px;
             box-shadow: 0 6px 30px rgba(0,0,0,0.12);
             text-align: center;
-            font-family: -apple-system, sans-serif;
         }
         .track-title {
             font-size: 24px;
             margin-bottom: 16px;
-            color: #1976D2;
+            color: #1976D2; /* --primary из основного CSS */
         }
         .track-subtitle {
             color: #555;
@@ -28,6 +35,13 @@
         }
         .phone-input-group {
             margin-bottom: 20px;
+            text-align: left;
+        }
+        .phone-input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
         }
         .phone-input-group input {
             width: 100%;
@@ -38,11 +52,11 @@
             box-sizing: border-box;
         }
         .phone-input-group input:focus {
-            border-color: #1976D2;
+            border-color: #1976D2; /* --primary */
             outline: none;
         }
         .btn-track {
-            background: #1976D2;
+            background: #1976D2; /* --primary */
             color: white;
             border: none;
             padding: 14px 28px;
@@ -50,9 +64,10 @@
             border-radius: 8px;
             cursor: pointer;
             margin-top: 10px;
+            transition: background-color 0.3s ease;
         }
         .btn-track:hover {
-            background: #1565C0;
+            background: #1565C0; /* --primary hover */
         }
         .orders-list {
             margin-top: 30px;
@@ -67,7 +82,7 @@
         }
         .order-id {
             font-weight: bold;
-            color: #1976D2;
+            color: #1976D2; /* --primary */
         }
         .order-status {
             display: inline-block;
@@ -75,21 +90,37 @@
             border-radius: 6px;
             font-size: 12px;
             margin-top: 6px;
+            font-weight: 600;
         }
-        .status-new { background: #FFF3E0; color: #F57C00; }
-        .status-progress { background: #E3F2FD; color: #1976D2; }
-        .status-completed { background: #E8F5E8; color: #388E3C; }
-        .status-cancelled { background: #FFEBEE; color: #D32F2F; }
-        .no-orders {
+        /* Статусы из основного CSS */
+        .status-new { background: #e8f5e8; color: #27ae60; } /* --success */
+        .status-progress { background: #fff3cd; color: #f39c12; } /* --warning */
+        .status-completed { background: #d1ecf1; color: #17a2b8; } /* --info */
+        .status-cancelled { background: #f8d7da; color: #721c24; } /* --danger */
+
+        .no-orders, .error-message {
             color: #777;
             font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+        .error-message {
+             color: #e74c3c; /* --danger */
         }
         .back-link {
             display: inline-block;
             margin-top: 20px;
-            color: #1976D2;
+            color: #1976D2; /* --primary */
             text-decoration: none;
             font-size: 14px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #555;
         }
     </style>
 </head>
@@ -101,6 +132,7 @@
         </div>
 
         <div class="phone-input-group">
+            <label for="phone">Номер телефона:</label>
             <input type="tel" id="phone" placeholder="Введите номер телефона (например, 77071234567)" />
         </div>
         <button class="btn-track" onclick="searchOrdersByPhone()">🔍 Найти заказы</button>
@@ -111,48 +143,7 @@
     </div>
 
     <script>
-        async function searchOrdersByPhone() {
-            const phone = document.getElementById('phone').value.trim();
-            const results = document.getElementById('results');
-            results.innerHTML = '<div>Поиск...</div>';
-
-            if (!phone) {
-                results.innerHTML = '<div class="no-orders">Введите номер телефона</div>';
-                return;
-            }
-
-            try {
-                const res = await fetch(`/api/track-by-phone?phone=${encodeURIComponent(phone)}`);
-                if (!res.ok) {
-                    throw new Error('Не удалось найти заказы');
-                }
-                const orders = await res.json();
-
-                if (orders.length === 0) {
-                    results.innerHTML = '<div class="no-orders">Заказы не найдены</div>';
-                    return;
-                }
-
-                results.innerHTML = orders.map(o => `
-                    <div class="order-item">
-                        <div><strong>Заказ:</strong> <span class="order-id">#${o.id}</span></div>
-                        <div><strong>Получатель:</strong> ${o.receiver_name || '—'}</div>
-                        <div><strong>Адрес:</strong> ${o.receiver_address || '—'}</div>
-                        <div><strong>Статус:</strong> 
-                            <span class="order-status status-${o.status}">
-                                ${getStatusText(o.status)}
-                            </span>
-                        </div>
-                        <div><strong>Дата:</strong> ${formatDate(o.created_at)}</div>
-                    </div>
-                `).join('');
-            } catch (err) {
-                results.innerHTML = '<div class="no-orders">Ошибка: не удалось загрузить данные</div>';
-                console.error('Ошибка поиска заказов:', err);
-            }
-        }
-
-        // Вспомогательные функции (копия из app.js)
+        // Вспомогательные функции
         function getStatusText(status) {
             const map = {
                 'new': 'Новый',
@@ -168,6 +159,103 @@
             const date = new Date(dateStr);
             return isNaN(date.getTime()) ? '—' : date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
         }
+
+        async function searchOrdersByPhone() {
+            const phoneInput = document.getElementById('phone');
+            const resultsDiv = document.getElementById('results');
+            const phone = phoneInput.value.trim();
+
+            // Очистка предыдущих результатов
+            resultsDiv.innerHTML = '';
+
+            if (!phone) {
+                resultsDiv.innerHTML = '<div class="no-orders">Пожалуйста, введите номер телефона.</div>';
+                phoneInput.focus();
+                return;
+            }
+
+            // Индикатор загрузки
+            resultsDiv.innerHTML = '<div class="loading">Поиск заказов...</div>';
+
+            try {
+                const response = await fetch(`/api/track-by-phone?phone=${encodeURIComponent(phone)}`);
+
+                // Проверка HTTP статуса
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        resultsDiv.innerHTML = '<div class="no-orders">Заказы по указанному номеру не найдены.</div>';
+                        return;
+                    } else if (response.status === 400) {
+                        resultsDiv.innerHTML = '<div class="error-message">Ошибка запроса. Проверьте правильность введенного номера.</div>';
+                        return;
+                    } else {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                }
+
+                // Попытка получить тело ответа
+                let data;
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    data = await response.json();
+                } else {
+                    // Если не JSON, попробуем текст
+                    const text = await response.text();
+                    if (!text.trim()) {
+                        data = null; // Пустое тело
+                    } else {
+                        throw new Error(`Ожидался JSON, получен: ${text.substring(0, 100)}...`);
+                    }
+                }
+
+                // Обработка данных
+                console.log("Полученные данные:", data); // Для отладки
+
+                // Проверка, является ли data массивом
+                if (data === null || data === undefined) {
+                    resultsDiv.innerHTML = '<div class="no-orders">Заказы по указанному номеру не найдены.</div>';
+                } else if (Array.isArray(data)) {
+                    if (data.length === 0) {
+                        resultsDiv.innerHTML = '<div class="no-orders">Заказы по указанному номеру не найдены.</div>';
+                    } else {
+                        // Отображение заказов
+                        resultsDiv.innerHTML = data.map(order => `
+                            <div class="order-item">
+                                <div><strong>Заказ:</strong> <span class="order-id">#${order.id || '—'}</span></div>
+                                <div><strong>Получатель:</strong> ${order.receiver_name || '—'}</div>
+                                <div><strong>Адрес доставки:</strong> ${order.receiver_address || '—'}</div>
+                                <div><strong>Статус:</strong> 
+                                    <span class="order-status status-${order.status || 'new'}">
+                                        ${getStatusText(order.status)}
+                                    </span>
+                                </div>
+                                <div><strong>Дата создания:</strong> ${formatDate(order.created_at)}</div>
+                                <div><strong>Стоимость доставки:</strong> ${order.delivery_cost_tenge ? `${order.delivery_cost_tenge} ₸` : '—'}</div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    // Если data - это объект, возможно, ошибка или другой формат
+                    if (data.error) {
+                        resultsDiv.innerHTML = `<div class="error-message">Ошибка сервера: ${data.error}</div>`;
+                    } else {
+                        resultsDiv.innerHTML = '<div class="error-message">Получен неожиданный формат данных от сервера.</div>';
+                        console.error("Неожиданный формат данных:", data);
+                    }
+                }
+
+            } catch (error) {
+                console.error('Ошибка поиска заказов:', error);
+                resultsDiv.innerHTML = `<div class="error-message">Произошла ошибка при поиске заказов: ${error.message}</div>`;
+            }
+        }
+
+        // Добавим обработчик Enter для поля ввода
+        document.getElementById('phone').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                searchOrdersByPhone();
+            }
+        });
     </script>
 </body>
 </html>
