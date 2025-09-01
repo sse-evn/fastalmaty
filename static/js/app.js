@@ -795,29 +795,21 @@ function copyApiKey() {
 function revokeApiKey(id) {
     if (!confirm('Отозвать ключ?')) return;
 
-    // Передаём id как query-параметр
     fetch(`/api/admin/revoke-api-key?id=${encodeURIComponent(id)}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         }
-        // ❗ Не нужно тело — id уже в URL
+        // ❌ НЕ нужно тело — id уже в URL
     })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.error || 'Ошибка отзыва ключа');
-            });
-        }
-        return response.json();
-    })
-    .then(() => {
+    .then(response => response.json())
+    .then(data => {
         showNotification('Ключ отозван', 'success');
         loadAdminApiKeys();
     })
-    .catch(error => {
-        console.error('Ошибка отзыва API-ключа:', error);
-        showNotification('Ошибка: ' + error.message, 'error');
+    .catch(err => {
+        console.error('Ошибка отзыва ключа:', err);
+        showNotification('Ошибка: ' + (err.message || 'Неизвестная ошибка'), 'error');
     });
 }
         function applyAnalyticsFilters() {

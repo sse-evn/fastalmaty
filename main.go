@@ -98,7 +98,18 @@ func main() {
 		api.GET("/stats", middleware.AuthRequired(), handlers.StatsHandler)
 		api.GET("/orders", middleware.AuthRequired(), handlers.GetOrdersHandler)
 
-		api.POST("/orders", middleware.AuthRequired(), handlers.CreateOrderHandler)
+		api.POST("/orders", func(c *gin.Context) {
+			// Проверяем: если есть Authorization → пробуем API-ключ
+			if c.GetHeader("Authorization") != "" {
+				middleware.ApiKeyAuth()(c)
+				if c.IsAborted() {
+					return
+				}
+			} else {
+				// Иначе — требуем сессию
+				middleware.AuthRequired()(c)
+			}
+		}, handlers.CreateOrderHandler)
 		api.GET("/courier/orders",
 			middleware.AuthRequired(),
 			middleware.RoleRequired("admin", "manager", "courier"),
