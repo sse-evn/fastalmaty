@@ -110,6 +110,10 @@ func main() {
 		api.POST("/order/:id/confirm",
 			middleware.AuthRequired(),
 			handlers.ConfirmOrderHandler)
+		api.PUT("/order/:id/status",
+			middleware.AuthRequired(),
+			middleware.RoleRequired("admin", "manager"), // Разрешаем только админу и менеджеру
+			handlers.ChangeOrderStatusHandler)           // Нужно создать этот обработчик
 		api.GET("/clients/search",
 			middleware.AuthRequired(),
 			handlers.SearchClientHandler)
@@ -128,7 +132,7 @@ func main() {
 			handlers.AvailableOrdersHandler)
 		api.POST("/order/:id/take",
 			middleware.AuthRequired(),
-			middleware.RoleRequired("courier"),
+			middleware.RoleRequired("admin", "manager", "courier"),
 			handlers.TakeOrderHandler)
 
 		api.POST("/orders/bulk",

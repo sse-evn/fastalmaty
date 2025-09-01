@@ -4,9 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>FastAlmaty — Логистическая платформа</title>
-    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
@@ -561,6 +559,33 @@
         .btn-link:hover {
             text-decoration: underline;
         }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content a:hover {background-color: #f1f1f1;}
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .dropdown:hover .dropbtn {
+            background-color: #3e8e41;
+        }
         @media (max-width: 768px) {
             .container { flex-direction: column; }
             .sidebar { width: 100%; height: auto; }
@@ -681,28 +706,35 @@
                     <div class="fast-order-title">⚡ Быстрое создание заказа</div>
                     <form id="fast-order-form">
                         <div class="fast-form-grid">
+                             <!-- Отправитель -->
                             <div class="form-group">
                                 <label>👤 Отправитель</label>
-                                <input type="text" class="form-input" placeholder="Имя" id="sender-name" />
-                                <input type="tel" class="form-input" placeholder="Телефон" id="sender-phone" />
+                                <input type="text" class="form-input" placeholder="Имя отправителя" id="sender-name" />
+                                <input type="tel" class="form-input" placeholder="Телефон отправителя" id="sender-phone" />
                                 <textarea class="form-input" placeholder="Адрес забора" id="sender-address" rows="2"></textarea>
                             </div>
+
+                            <!-- Получатель (сделаны обязательными) -->
                             <div class="form-group">
-                                <label>👥 Получатель</label>
-                                <input type="text" class="form-input" placeholder="Имя" id="receiver-name" required />
-                                <input type="tel" class="form-input" placeholder="Телефон" id="receiver-phone" required />
+                                <label>👥 Получатель <span style="color: red;">*</span></label>
+                                <input type="text" class="form-input" placeholder="Имя получателя" id="receiver-name" required />
+                                <input type="tel" class="form-input" placeholder="Телефон получателя" id="receiver-phone" required />
                                 <textarea class="form-input" placeholder="Адрес доставки" id="receiver-address" rows="2" required></textarea>
                             </div>
                         </div>
+
                         <div class="fast-form-grid">
+                            <!-- Товар -->
                             <div class="form-group">
-                                <label>📦 Товар</label>
-                                <input type="text" class="form-input" placeholder="Описание" id="product-desc" />
+                                <label>📦 Товар <span style="color: red;">*</span></label>
+                                <input type="text" class="form-input" placeholder="Описание товара" id="product-desc" required />
                                 <div class="grid-2cols">
-                                    <input type="number" class="form-input" placeholder="Вес (кг)" id="weight" step="0.1" />
-                                    <input type="number" class="form-input" placeholder="Объем (л)" id="volume" step="0.1" />
+                                    <input type="number" class="form-input" placeholder="Вес (кг)" id="weight" step="0.01" min="0" />
+                                    <input type="number" class="form-input" placeholder="Объем (л)" id="volume" step="0.01" min="0" />
                                 </div>
                             </div>
+
+                            <!-- Оплата -->
                             <div class="form-group">
                                 <label>💳 Оплата</label>
                                 <select class="form-select" id="payment-method">
@@ -710,14 +742,23 @@
                                     <option value="card">Карта</option>
                                     <option value="online">Онлайн</option>
                                 </select>
-                                <input type="number" class="form-input" placeholder="Стоимость доставки (₸)" id="delivery-cost" value="500" />
+                                <input type="number" class="form-input" placeholder="Стоимость доставки (₸)" id="delivery-cost" value="500" min="0"/>
+                                <!-- Добавлено поле для общей стоимости товара -->
+                                 <input type="number" class="form-input" placeholder="Стоимость товара (₸)" id="product-cost" min="0"/>
                             </div>
                         </div>
+
+                        <!-- Комментарий -->
+                         <div class="form-group">
+                            <label>📝 Комментарий</label>
+                            <textarea class="form-input" placeholder="Дополнительная информация" id="order-comment" rows="2"></textarea>
+                        </div>
+
                         <div class="action-row">
                             <button type="button" class="btn btn-warning btn-sm" onclick="resetForm()">
                                 <i class="fas fa-trash-alt"></i> Очистить
                             </button>
-                            <button type="button" class="btn btn-primary" onclick="submitFastOrder()">
+                            <button type="submit" class="btn btn-primary"> <!-- type="submit" для лучшей семантики и работы с формой -->
                                 <i class="fas fa-check"></i> Создать
                             </button>
                         </div>
@@ -733,21 +774,19 @@
                     </div>
                 </div>
                 <div class="orders-section">
-                    <div class="table-responsive">
-                        <table class="orders-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Получатель</th>
-                                    <th>Адрес</th>
-                                    <th>Статус</th>
-                                    <th>Дата</th>
-                                    <th class="text-right">Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody id="all-orders"></tbody>
-                        </table>
-                    </div>
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Получатель</th>
+                                <th>Адрес</th>
+                                <th>Статус</th>
+                                <th>Дата</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-orders"></tbody>
+                    </table>
                 </div>
             </div>
             <div id="analytics" class="page">
@@ -852,8 +891,28 @@
                 </div>
                 <div class="orders-section">
                     <div class="section-header">
-                        <h2 class="section-title">Заказы в пути</h2>
-                        <button class="btn btn-success" onclick="loadCourierOrders()"><i class="fas fa-sync-alt"></i></button>
+                        <h2 class="section-title">Доступные заказы</h2>
+                        <button class="btn btn-success" onclick="loadAvailableOrders()"><i class="fas fa-sync-alt"></i> Обновить</button>
+                    </div>
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Клиент</th>
+                                <th>Адрес</th>
+                                <th>Вес (кг)</th>
+                                <th>Стоимость</th>
+                                <th>Дата</th>
+                                <th>Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody id="available-orders"></tbody>
+                    </table>
+                </div>
+                <div class="orders-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Мои заказы</h2>
+                        <button class="btn btn-success" onclick="loadCourierOrders()"><i class="fas fa-sync-alt"></i> Обновить</button>
                     </div>
                     <table class="orders-table">
                         <thead>
@@ -862,6 +921,7 @@
                                 <th>Клиент</th>
                                 <th>Адрес</th>
                                 <th>Статус</th>
+                                <th>Дата</th>
                                 <th>Действие</th>
                             </tr>
                         </thead>
@@ -1045,6 +1105,20 @@
     <script>
         let ordersChart = null;
         let apiKeys = [];
+        let currentUserRole = 'courier'; 
+
+        async function getUserRole() {
+            try {
+                const res = await fetch('/api/session');
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUserRole = data.role || 'courier';
+                }
+            } catch (err) {
+                console.error('Ошибка получения роли пользователя:', err);
+            }
+        }
+
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             const page = document.getElementById(pageId);
@@ -1055,11 +1129,12 @@
             page.classList.add('active');
             onPageLoad(pageId);
         }
+
         function onPageLoad(pageId) {
             switch (pageId) {
                 case 'dashboard': updateStats(); break;
                 case 'orders': loadAllOrders(); break;
-                case 'courier': loadCourierOrders(); break;
+                case 'courier': loadAvailableOrders(); loadCourierOrders(); break;
                 case 'settings': loadSettings(); break;
                 case 'admin': loadAdminPanel(); break;
                 case 'analytics': initAnalytics(); break;
@@ -1067,6 +1142,7 @@
                 case 'clients': searchClient(); break;
             }
         }
+
         async function loadPage(pageId) {
             try {
                 const res = await fetch(`/templates/${pageId}.html`);
@@ -1084,6 +1160,7 @@
                 showNotification('Ошибка загрузки страницы: ' + err.message, 'error');
             }
         }
+
         async function updateStats() {
             try {
                 const res = await fetch('/api/stats');
@@ -1099,6 +1176,7 @@
                 showNotification('Ошибка загрузки статистики', 'error');
             }
         }
+
         async function loadRecentOrders() {
             try {
                 const res = await fetch('/api/orders?limit=5');
@@ -1114,68 +1192,92 @@
                             <td>${o.receiver_name || '—'}</td>
                             <td>${o.receiver_address || '—'}</td>
                             <td><span class="status-badge status-${o.status || 'new'}">${getStatusText(o.status)}</span></td>
-                            <td>${o.delivery_cost_tenge || 0} ₸</td>
+                            <td>${(o.delivery_cost_tenge || 0).toLocaleString()} ₸</td>
                         </tr>
                     `).join('');
             } catch (err) {
                 console.error('Ошибка загрузки последних заказов:', err);
             }
         }
+
         function initNewOrderForm() {
             const phone = document.getElementById('receiver-phone');
             if (!phone) return;
+
             phone.addEventListener('blur', async () => {
                 const val = phone.value.trim();
                 if (val.length < 10) return;
+
                 try {
                     const res = await fetch(`/api/clients/search?phone=${encodeURIComponent(val)}`);
                     if (!res.ok) return;
                     const clients = await res.json();
                     if (Array.isArray(clients) && clients.length > 0) {
                         const c = clients[0];
-                        document.getElementById('receiver-name').value = c.name;
-                        document.getElementById('receiver-address').value = c.address;
-                        showNotification('Клиент найден', 'success');
+                        document.getElementById('receiver-name').value = c.name || '';
+                        document.getElementById('receiver-address').value = c.address || '';
+                        showNotification('📋 Клиент найден и данные заполнены', 'success');
                     }
                 } catch (err) {
-                    console.warn('Автозаполнение:', err);
+                    console.warn('Автозаполнение клиента:', err);
                 }
             });
         }
+
         function resetForm() {
             const form = document.getElementById('fast-order-form');
-            if (form) form.reset();
-            showNotification('Форма очищена', 'info');
+            if (form) {
+                form.reset();
+            }
+            showNotification('🧹 Форма очищена', 'info');
         }
+
         async function submitFastOrder() {
             const data = {
-                sender_name: document.getElementById('sender-name').value,
-                sender_phone: document.getElementById('sender-phone').value,
-                sender_address: document.getElementById('sender-address').value,
-                receiver_name: document.getElementById('receiver-name').value,
-                receiver_phone: document.getElementById('receiver-phone').value,
-                receiver_address: document.getElementById('receiver-address').value,
-                description: document.getElementById('product-desc').value,
-                weight_kg: parseFloat(document.getElementById('weight').value) || 0,
-                volume_l: parseFloat(document.getElementById('volume').value) || 0,
-                delivery_cost_tenge: parseFloat(document.getElementById('delivery-cost').value) || 0,
-                payment_method: document.getElementById('payment-method').value
+                sender_name: document.getElementById('sender-name').value.trim() || null,
+                sender_phone: document.getElementById('sender-phone').value.trim() || null,
+                sender_address: document.getElementById('sender-address').value.trim() || null,
+                receiver_name: document.getElementById('receiver-name').value.trim(),
+                receiver_phone: document.getElementById('receiver-phone').value.trim(),
+                receiver_address: document.getElementById('receiver-address').value.trim(),
+                description: document.getElementById('product-desc').value.trim(),
+                weight_kg: parseFloat(document.getElementById('weight').value) || 0.0,
+                volume_l: parseFloat(document.getElementById('volume').value) || 0.0,
+                delivery_cost_tenge: parseFloat(document.getElementById('delivery-cost').value) || 0.0,
+                product_cost_tenge: parseFloat(document.getElementById('product-cost').value) || 0.0,
+                payment_method: document.getElementById('payment-method').value,
+                comment: document.getElementById('order-comment').value.trim() || null
             };
+
+            if (!data.receiver_name || !data.receiver_phone || !data.receiver_address || !data.description) {
+                 showNotification('Пожалуйста, заполните все обязательные поля (отмечены *).', 'error');
+                 return;
+            }
+
             try {
                 const res = await fetch('/api/orders', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
+
                 const result = await res.json();
-                if (!res.ok) throw new Error(result.error || 'Ошибка создания заказа');
-                showNotification('Заказ создан', 'success');
+
+                if (!res.ok) {
+                    const errorMsg = result.error || result.message || 'Ошибка создания заказа';
+                    throw new Error(errorMsg);
+                }
+
+                showNotification('✅ Заказ успешно создан!', 'success');
                 resetForm();
                 showPage('dashboard');
+
             } catch (err) {
-                showNotification('Ошибка: ' + err.message, 'error');
+                console.error('Ошибка при создании заказа:', err);
+                showNotification(`❌ Ошибка: ${err.message}`, 'error');
             }
         }
+
         async function loadAllOrders() {
             try {
                 const res = await fetch('/api/orders');
@@ -1192,11 +1294,11 @@
                             <td>${o.receiver_address}</td>
                             <td><span class="status-badge status-${o.status}">${getStatusText(o.status)}</span></td>
                             <td>${formatDate(o.created_at)}</td>
-                            <td class="text-right">
+                            <td>
                                 <button class="btn btn-warning btn-sm" onclick="generateWaybill('${o.id}')">
                                     <i class="fas fa-print"></i> PDF
                                 </button>
-                                ${getChangeStatusButton(o.id, o.status)}
+                                ${getChangeStatusDropdown(o.id, o.status)}
                             </td>
                         </tr>
                     `).join('');
@@ -1204,32 +1306,31 @@
                 showNotification('Ошибка загрузки заказов', 'error');
             }
         }
-        function getChangeStatusButton(orderId, currentStatus) {
-            // Проверяем роль пользователя (предполагается, что она хранится в sessionStorage или передается через API)
-            const userRole = sessionStorage.getItem('user_role') || 'courier';
-            if (userRole !== 'admin' && userRole !== 'manager') {
-                return ''; // Если не админ и не менеджер, кнопка не показывается
+
+        function getChangeStatusDropdown(orderId, currentStatus) {
+            if (currentUserRole !== 'admin' && currentUserRole !== 'manager') {
+                return '';
             }
-
             const statusOptions = [
-                { value: 'new', label: 'НОВЫЙ', color: 'success' },
-                { value: 'progress', label: 'В ПУТИ', color: 'warning' },
-                { value: 'completed', label: 'ДОСТАВЛЕНО', color: 'success' },
-                { value: 'cancelled', label: 'ОТМЕНИТЬ', color: 'danger' }
+                { value: 'new', label: 'Новый' },
+                { value: 'progress', label: 'В пути' },
+                { value: 'completed', label: 'Доставлен' },
+                { value: 'cancelled', label: 'Отменён' }
             ];
-
-            // Формируем строку с кнопкой выбора статуса
-            return `<div class="dropdown">
-                        <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            Изменить статус
-                        </button>
-                        <ul class="dropdown-menu">
-                            ${statusOptions.map(option => `
-                                <li><button class="dropdown-item" onclick="changeOrderStatus('${orderId}', '${option.value}')">${option.label}</button></li>
-                            `).join('')}
-                        </ul>
-                    </div>`;
+            return `
+                <div class="dropdown" style="display: inline-block;">
+                    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button">
+                        Изменить статус
+                    </button>
+                    <div class="dropdown-content">
+                        ${statusOptions.map(option => 
+                            `<a href="#" onclick="changeOrderStatus('${orderId}', '${option.value}'); return false;">${option.label}</a>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
         }
+
         async function changeOrderStatus(orderId, newStatus) {
             try {
                 const res = await fetch(`/api/order/${orderId}/status`, {
@@ -1242,11 +1343,12 @@
                     throw new Error(errorData.error || 'Ошибка изменения статуса');
                 }
                 showNotification('Статус изменён', 'success');
-                loadAllOrders(); // Обновляем список заказов
+                loadAllOrders();
             } catch (err) {
                 showNotification('Ошибка: ' + err.message, 'error');
             }
         }
+
         function searchOrders() {
             const query = document.getElementById('search-input').value.toLowerCase();
             const rows = document.querySelectorAll('#all-orders tr');
@@ -1255,6 +1357,31 @@
                 row.style.display = text.includes(query) ? '' : 'none';
             });
         }
+
+        async function loadAvailableOrders() {
+            try {
+                const res = await fetch('/api/orders/available');
+                const data = await res.json();
+                const orders = Array.isArray(data) ? data : data.orders || [];
+                const tbody = document.getElementById('available-orders');
+                tbody.innerHTML = orders.length === 0
+                    ? '<tr><td colspan="7" class="text-center">Нет доступных заказов</td></tr>'
+                    : orders.map(o => `
+                        <tr>
+                            <td>#${o.id}</td>
+                            <td>${o.receiver_name}</td>
+                            <td>${o.receiver_address}</td>
+                            <td>${o.weight_kg} кг</td>
+                            <td>${(o.delivery_cost_tenge || 0).toLocaleString()} ₸</td>
+                            <td>${formatDate(o.created_at)}</td>
+                            <td><button class="btn btn-success btn-sm" onclick="takeOrder('${o.id}')">Взять</button></td>
+                        </tr>
+                    `).join('');
+            } catch (err) {
+                showNotification('Ошибка загрузки доступных заказов', 'error');
+            }
+        }
+
         async function loadCourierOrders() {
             try {
                 const res = await fetch('/api/courier/orders');
@@ -1262,20 +1389,61 @@
                 const orders = Array.isArray(data) ? data : data.orders || [];
                 const tbody = document.getElementById('courier-orders');
                 tbody.innerHTML = orders.length === 0
-                    ? '<tr><td colspan="5" class="text-center">Нет заказов</td></tr>'
+                    ? '<tr><td colspan="6" class="text-center">Нет заказов</td></tr>'
                     : orders.map(o => `
                         <tr>
                             <td>#${o.id}</td>
                             <td>${o.receiver_name}</td>
                             <td>${o.receiver_address}</td>
                             <td><span class="status-badge status-${o.status}">${getStatusText(o.status)}</span></td>
-                            <td><button class="btn btn-success btn-sm" onclick="confirmOrder('${o.id}')"><i class="fas fa-check"></i></button></td>
+                            <td>${formatDate(o.created_at)}</td>
+                            <td>
+                                ${o.status === 'progress' ? 
+                                    `<button class="btn btn-success btn-sm" onclick="confirmOrder('${o.id}')">Доставлен</button>` : 
+                                    `<span>${getStatusText(o.status)}</span>`
+                                }
+                            </td>
                         </tr>
                     `).join('');
             } catch (err) {
                 showNotification('Ошибка загрузки заказов курьера', 'error');
             }
         }
+
+        async function takeOrder(orderId) {
+            try {
+                const res = await fetch(`/api/order/${orderId}/take`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || 'Не удалось взять заказ');
+                }
+                showNotification('Заказ взят!', 'success');
+                loadAvailableOrders();
+                loadCourierOrders();
+            } catch (err) {
+                showNotification('Ошибка: ' + err.message, 'error');
+            }
+        }
+
+        async function confirmOrder(id) {
+            const res = await fetch(`/api/order/${id}/confirm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'accept' })
+            });
+            if (res.ok) {
+                showNotification('Заказ доставлен!', 'success');
+                loadCourierOrders();
+                loadAvailableOrders();
+            } else {
+                const data = await res.json();
+                showNotification('Ошибка: ' + (data.error || 'Не удалось подтвердить заказ'), 'error');
+            }
+        }
+
         async function searchClient() {
             const phone = document.getElementById('client-search').value;
             if (phone.length < 3) return;
@@ -1295,6 +1463,7 @@
                 showNotification('Ошибка поиска', 'error');
             }
         }
+
         async function loadSettings() {
             try {
                 const res = await fetch('/api/settings');
@@ -1314,6 +1483,7 @@
                 showNotification('Ошибка: ' + err.message, 'error');
             }
         }
+
         async function saveSettings() {
             const settings = {
                 company_name: document.getElementById('setting-company_name').value,
@@ -1339,10 +1509,12 @@
                 showNotification('Ошибка: ' + err.message, 'error');
             }
         }
+
         async function initAnalytics() {
             await loadAnalyticsData();
             initCharts();
         }
+
         async function loadAnalyticsData() {
             try {
                 const res = await fetch('/api/analytics/data');
@@ -1375,6 +1547,7 @@
                 showNotification('Ошибка загрузки аналитики', 'error');
             }
         }
+
         function initCharts() {
             const ctx = document.getElementById('orders-by-day');
             if (ctx && !ordersChart) {
@@ -1404,23 +1577,11 @@
                 });
             }
         }
+
         function generateWaybill(id) {
             window.open(`/api/waybill/${id}`, '_blank');
         }
-        async function confirmOrder(id) {
-            const res = await fetch(`/api/order/${id}/confirm`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'accept' })
-            });
-            if (res.ok) {
-                showNotification('Заказ доставлен!', 'success');
-                loadCourierOrders();
-            } else {
-                const data = await res.json();
-                showNotification('Ошибка: ' + (data.error || 'Не удалось подтвердить заказ'), 'error');
-            }
-        }
+
         function deleteUser(id, username) {
             if (!confirm(`Удалить "${username}"?`)) return;
             fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
@@ -1438,6 +1599,7 @@
                 showNotification('Ошибка сети', 'error');
             });
         }
+
         function getRoleBadge(role) {
             const badges = {
                 admin: '<span class="badge badge-danger">Админ</span>',
@@ -1446,6 +1608,7 @@
             };
             return badges[role] || `<span class="badge">${role}</span>`;
         }
+
         function getStatusText(status) {
             const map = {
                 new: 'Новый',
@@ -1455,11 +1618,13 @@
             };
             return map[status] || status;
         }
+
         function formatDate(dateString) {
             if (!dateString) return '—';
             const date = new Date(dateString);
             return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
         }
+
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.className = `notification notification-${type}`;
@@ -1487,7 +1652,9 @@
                 setTimeout(() => document.body.removeChild(notification), 500);
             }, 5000);
         }
-        document.addEventListener('DOMContentLoaded', () => {
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await getUserRole();
             document.querySelectorAll('[data-page]').forEach(link => {
                 link.addEventListener('click', e => {
                     e.preventDefault();
@@ -1498,6 +1665,15 @@
                     showPage(target.dataset.page);
                 });
             });
+            
+            const fastOrderForm = document.getElementById('fast-order-form');
+            if (fastOrderForm) {
+                fastOrderForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    await submitFastOrder();
+                });
+            }
+
             window.openAddUserModal = function() {
                 const modal = document.getElementById('addUserModal');
                 if (modal) modal.style.display = 'flex';
@@ -1536,10 +1712,12 @@
             }
             showPage('dashboard');
         });
+
         async function loadAdminPanel() {
             await loadAdminUsers();
             await loadAdminApiKeys();
         }
+
         async function loadAdminUsers() {
             try {
                 const res = await fetch('/api/admin/users');
@@ -1561,6 +1739,7 @@
                 showNotification('Ошибка загрузки', 'error');
             }
         }
+
         async function loadAdminApiKeys() {
             try {
                 const res = await fetch('/api/admin/api-keys');
@@ -1584,6 +1763,7 @@
                 showNotification('Ошибка загрузки', 'error');
             }
         }
+
         function generateApiKey() {
             fetch('/api/admin/generate-api-key', {
                 method: 'POST',
@@ -1603,6 +1783,7 @@
                 showNotification('Ошибка сети', 'error');
             });
         }
+
         function copyApiKey(key) {
             if (!key) {
                 showNotification('Ключ пустой', 'error');
@@ -1612,23 +1793,41 @@
                 .then(() => showNotification('Скопировано', 'success'))
                 .catch(() => showNotification('Не удалось скопировать', 'error'));
         }
+
         function revokeApiKey(id) {
             if (!confirm('Отозвать ключ?')) return;
-            fetch(`/api/admin/revoke-api-key?id=${id}`, { method: 'POST' })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) {
-                    showNotification('Ошибка: ' + data.error, 'error');
-                    return;
+            fetch('/api/admin/revoke-api-key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: id })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        let errorMsg = 'Ошибка отзыва ключа';
+                        try {
+                            const errorData = JSON.parse(text);
+                            errorMsg = errorData.error || errorMsg;
+                        } catch (e) {
+                            errorMsg = text || errorMsg;
+                        }
+                        throw new Error(errorMsg);
+                    });
                 }
-                showNotification('Отозван', 'success');
+                return response.json().catch(() => ({}));
+            })
+            .then(data => {
+                showNotification('Ключ отозван', 'success');
                 loadAdminApiKeys();
             })
-            .catch(err => {
-                console.error('Ошибка отзыва:', err);
-                showNotification('Ошибка сети', 'error');
+            .catch(error => {
+                console.error('Ошибка в функции revokeApiKey:', error);
+                showNotification('Ошибка: ' + error.message, 'error');
             });
         }
+
         function applyAnalyticsFilters() {
             showNotification('Фильтры применены', 'info');
         }
