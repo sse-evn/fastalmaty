@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"fastalmaty/db"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -17,7 +20,14 @@ type Settings struct {
 	TelegramNotifications bool   `json:"telegram_notifications"`
 	TelegramBotToken      string `json:"telegram_bot_token"`
 	TelegramChatID        string `json:"telegram_chat_id"`
+	ApiKey                string `json:"api_key"`
 }
+
+var (
+	tgToken string
+	tgChat  string
+	tgMutex sync.RWMutex
+)
 
 func GetSettingsHandler(c *gin.Context) {
 	session := sessions.Default(c)
@@ -48,6 +58,7 @@ func GetSettingsHandler(c *gin.Context) {
 	s.TelegramNotifications = settings["telegram_notifications"] == "true"
 	s.TelegramBotToken = settings["telegram_bot_token"]
 	s.TelegramChatID = settings["telegram_chat_id"]
+	s.ApiKey = settings["api_key"]
 
 	c.JSON(http.StatusOK, s)
 }
@@ -86,6 +97,7 @@ func SaveSettingsHandler(c *gin.Context) {
 		"telegram_notifications": boolStr(settings.TelegramNotifications),
 		"telegram_bot_token":     settings.TelegramBotToken,
 		"telegram_chat_id":       settings.TelegramChatID,
+		"api_key":                settings.ApiKey,
 	}
 
 	for key, value := range bulk {
@@ -99,6 +111,37 @@ func SaveSettingsHandler(c *gin.Context) {
 	UpdateTelegramConfig(settings.TelegramBotToken, settings.TelegramChatID)
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func UpdateTelegramConfig(token, chat string) {
+	tgMutex.Lock()
+	defer tgMutex.Unlock()
+	tgToken = token
+	tgChat = chat
+}
+
+func SendTelegram(message string) {
+	tgMutex.RLock()
+	token := tgToken
+	chat := tgChat
+	tgMutex.RUnlock()
+
+	if token == "" || chat == "" {
+		return
+	}
+
+	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+	data := url.Values{}
+	data.Set("chat_id", chat)
+	data.Set("text", message)
+	data.Set("parse_mode", "HTML")
+
+	resp, err := http.Post(apiURL, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	if err != nil {
+		fmt.Printf("❌ Telegram error: %v\n", err)
+		return
+	}
+	resp.Body.Close()
 }
 
 func parseInt(s string) int {

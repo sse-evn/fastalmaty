@@ -1,57 +1,67 @@
-// handlers/available_orders.go
+// // // handlers/available_orders.go
 
 package handlers
 
-import (
-	"fastalmaty/db"
-	"net/http"
+// import (
+// 	"database/sql"
+// 	"fastalmaty/db"
+// 	"net/http"
 
-	"github.com/gin-gonic/gin"
-)
+// 	"github.com/gin-gonic/gin"
+// )
 
-// AvailableOrdersHandler — возвращает заказы, доступные для взятия
-func AvailableOrdersHandler(c *gin.Context) {
-	var orders []gin.H
+// func AvailableOrdersHandler(c *gin.Context) {
+// 	query := `
+// 		SELECT id, receiver_name, receiver_address, status,
+// 			   created_at, weight_kg, delivery_cost_tenge
+// 		FROM orders
+// 		WHERE status = 'new' OR status = 'progress'
+// 		ORDER BY created_at DESC
+// 	`
 
-	query := `
-		SELECT 
-			id, 
-			receiver_name, 
-			receiver_address, 
-			weight_kg, 
-			volume_l,
-			delivery_cost_tenge,
-			created_at
-		FROM orders 
-		WHERE status = 'new' 
-		ORDER BY created_at ASC
-	`
+// 	rows, err := db.DB.Query(query)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных: " + err.Error()})
+// 		return
+// 	}
+// 	defer rows.Close()
 
-	rows, err := db.DB.Query(query)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
-		return
-	}
-	defer rows.Close()
+// 	var orders []gin.H
+// 	for rows.Next() {
+// 		var id, receiverName, receiverAddress, status, createdAt string
+// 		var weightKg, deliveryCostTenge float64
+// 		var statusNull, createdAtNull sql.NullString
+// 		var weightNull, costNull sql.NullFloat64
 
-	for rows.Next() {
-		var id, receiverName, receiverAddress, createdAt string
-		var weight, volume, cost float64
-		err := rows.Scan(&id, &receiverName, &receiverAddress, &weight, &volume, &cost, &createdAt)
-		if err != nil {
-			continue
-		}
+// 		err := rows.Scan(&id, &receiverName, &receiverAddress, &statusNull,
+// 			&createdAtNull, &weightNull, &costNull)
+// 		if err != nil {
+// 			continue
+// 		}
 
-		orders = append(orders, gin.H{
-			"id":               id,
-			"receiver_name":    receiverName,
-			"receiver_address": receiverAddress,
-			"weight_kg":        weight,
-			"volume_l":         volume,
-			"delivery_cost":    cost,
-			"created_at":       createdAt,
-		})
-	}
+// 		if statusNull.Valid {
+// 			status = statusNull.String
+// 		}
+// 		if createdAtNull.Valid {
+// 			createdAt = createdAtNull.String
+// 		}
+// 		if weightNull.Valid {
+// 			weightKg = weightNull.Float64
+// 		}
+// 		if costNull.Valid {
+// 			deliveryCostTenge = costNull.Float64
+// 		}
 
-	c.JSON(http.StatusOK, orders)
-}
+// 		orders = append(orders, gin.H{
+// 			"id":                  id,
+// 			"receiver_name":       receiverName,
+// 			"receiver_address":    receiverAddress,
+// 			"status":              status,
+// 			"created_at":          createdAt,
+// 			"weight_kg":           weightKg,
+// 			"delivery_cost_tenge": deliveryCostTenge,
+// 		})
+// 	}
+
+// 	c.JSON(http.StatusOK, orders)
+// }

@@ -1,4 +1,3 @@
-// main.go
 package main
 
 import (
@@ -43,6 +42,7 @@ func loadConfig() config.Config {
 		DbPath:    dbPath,
 	}
 }
+
 func main() {
 	cfg := loadConfig()
 	ginMode := os.Getenv("GIN_MODE")
@@ -73,7 +73,6 @@ func main() {
 	router.LoadHTMLGlob("templates/*.html")
 	router.Use(static.Serve("/static", static.LocalFile("./static", false)))
 
-	// Динамическая загрузка шаблонов
 	router.GET("/templates/:page", func(c *gin.Context) {
 		page := c.Param("page")
 		filePath := filepath.Join("templates", page)
@@ -84,17 +83,14 @@ func main() {
 		c.File(filePath)
 	})
 
-	// === Публичные маршруты (без авторизации) ===
-	// Отслеживание по телефону
 	router.GET("/track-by-phone", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "track_by_phone.html", nil)
 	})
 	router.GET("/api/track-by-phone", handlers.TrackByPhoneHandler)
 
-	// Публичная накладная (для курьера/клиента)
-	router.GET("/api/waybill/:id", handlers.WaybillHandler) // без middleware.AuthRequired()
+	router.GET("/api/waybill/:id", handlers.WaybillHandler)
 	router.StaticFile("/favicon.ico", "./static/favicon.ico")
-	// === Защищённые API маршруты ===
+
 	api := router.Group("/api")
 	{
 		api.POST("/login", handlers.LoginHandler)
@@ -112,8 +108,8 @@ func main() {
 			handlers.ConfirmOrderHandler)
 		api.PUT("/order/:id/status",
 			middleware.AuthRequired(),
-			middleware.RoleRequired("admin", "manager"), // Разрешаем только админу и менеджеру
-			handlers.ChangeOrderStatusHandler)           // Нужно создать этот обработчик
+			middleware.RoleRequired("admin", "manager"),
+			handlers.ChangeOrderStatusHandler)
 		api.GET("/clients/search",
 			middleware.AuthRequired(),
 			handlers.SearchClientHandler)
@@ -176,7 +172,6 @@ func main() {
 			handlers.RevokeApiKeyHandler)
 	}
 
-	// === Прочие маршруты ===
 	router.GET("/", middleware.AuthRequired(), handlers.IndexHandler)
 	router.GET("/login", handlers.LoginPageHandler)
 
@@ -186,6 +181,7 @@ func main() {
 		log.Fatalf("❌ Ошибка запуска сервера: %v", err)
 	}
 }
+
 func runMigrations() {
 	dbPath := "./fastalmaty.db"
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {

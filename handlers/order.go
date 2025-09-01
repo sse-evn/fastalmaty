@@ -1,4 +1,3 @@
-// handlers/order.go
 package handlers
 
 import (
@@ -134,15 +133,184 @@ func CreateOrderHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Заказ создан", "id": order.ID})
 }
 
-func getStatusText(status string) string {
-	switch status {
-	case "new":
-		return "Новый"
-	case "progress":
-		return "В пути"
-	case "completed":
-		return "Доставлен"
-	default:
-		return status
+func AvailableOrdersHandler(c *gin.Context) {
+	query := `
+        SELECT id, receiver_name, receiver_address, status, 
+               created_at, weight_kg, delivery_cost_tenge 
+        FROM orders 
+        WHERE status = 'new' OR status = 'progress'
+        ORDER BY created_at DESC
+    `
+
+	rows, err := db.DB.Query(query)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"orders": []interface{}{}})
+		return
 	}
+	defer rows.Close()
+
+	var orders []gin.H
+	for rows.Next() {
+		var id, receiverName, receiverAddress, status, createdAt string
+		var weightKg, deliveryCostTenge float64
+		var statusNull, createdAtNull sql.NullString
+		var weightNull, costNull sql.NullFloat64
+
+		err := rows.Scan(&id, &receiverName, &receiverAddress, &statusNull,
+			&createdAtNull, &weightNull, &costNull)
+		if err != nil {
+			continue
+		}
+
+		if statusNull.Valid {
+			status = statusNull.String
+		}
+		if createdAtNull.Valid {
+			createdAt = createdAtNull.String
+		}
+		if weightNull.Valid {
+			weightKg = weightNull.Float64
+		}
+		if costNull.Valid {
+			deliveryCostTenge = costNull.Float64
+		}
+
+		orders = append(orders, gin.H{
+			"id":                  id,
+			"receiver_name":       receiverName,
+			"receiver_address":    receiverAddress,
+			"status":              status,
+			"created_at":          createdAt,
+			"weight_kg":           weightKg,
+			"delivery_cost_tenge": deliveryCostTenge,
+		})
+	}
+
+	if len(orders) == 0 {
+		c.JSON(http.StatusOK, gin.H{"orders": []interface{}{}})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"orders": orders})
+}
+
+func CourierOrdersHandler(c *gin.Context) {
+	userRole := c.GetString("user_role")
+	userID := c.GetInt("user_id")
+
+	var query string
+	var args []interface{}
+
+	if userRole == "courier" {
+		query = `
+            SELECT id, receiver_name, receiver_address, status, 
+                   created_at, weight_kg, delivery_cost_tenge 
+            FROM orders 
+            WHERE courier_id = ? AND status IN ('assigned', 'in_progress', 'progress')
+        `
+		args = append(args, userID)
+	} else {
+		query = `
+            SELECT id, receiver_name, receiver_address, status, 
+                   created_at, weight_kg, delivery_cost_tenge 
+            FROM orders 
+            WHERE status IN ('new', 'assigned', 'in_progress', 'progress')
+        `
+	}
+
+	rows, err := db.DB.Query(query, args...)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"orders": []interface{}{}})
+		return
+	}
+	defer rows.Close()
+
+	var orders []gin.H
+	for rows.Next() {
+		var id, receiverName, receiverAddress, status, createdAt string
+		var weightKg, deliveryCostTenge float64
+		var statusNull, createdAtNull sql.NullString
+		var weightNull, costNull sql.NullFloat64
+
+		err := rows.Scan(&id, &receiverName, &receiverAddress, &statusNull,
+			&createdAtNull, &weightNull, &costNull)
+		if err != nil {
+			continue
+		}
+
+		if statusNull.Valid {
+			status = statusNull.String
+		}
+		if createdAtNull.Valid {
+			createdAt = createdAtNull.String
+		}
+		if weightNull.Valid {
+			weightKg = weightNull.Float64
+		}
+		if costNull.Valid {
+			deliveryCostTenge = costNull.Float64
+		}
+
+		orders = append(orders, gin.H{
+			"id":                  id,
+			"receiver_name":       receiverName,
+			"receiver_address":    receiverAddress,
+			"status":              status,
+			"created_at":          createdAt,
+			"weight_kg":           weightKg,
+			"delivery_cost_tenge": deliveryCostTenge,
+		})
+	}
+
+	if len(orders) == 0 {
+		c.JSON(http.StatusOK, gin.H{"orders": []interface{}{}})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"orders": orders})
+}
+
+func TakeOrderHandler(c *gin.Context) {
+	orderID := c.Param("id")
+	userID := c.GetInt("user_id")
+
+	_, err := db.DB.Exec("UPDATE orders SET courier_id = ?, status = 'progress' WHERE id = ?", userID, orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка взятия заказа"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Заказ взят"})
+}
+
+func ConfirmOrderHandler(c *gin.Context) {
+	orderID := c.Param("id")
+
+	_, err := db.DB.Exec("UPDATE orders SET status = 'completed' WHERE id = ?", orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка подтверждения заказа"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Заказ доставлен"})
+}
+
+func ChangeOrderStatusHandler(c *gin.Context) {
+	orderID := c.Param("id")
+	var request struct {
+		Status string `json:"status"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный запрос"})
+		return
+	}
+
+	_, err := db.DB.Exec("UPDATE orders SET status = ? WHERE id = ?", request.Status, orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка изменения статуса"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Статус изменен"})
 }

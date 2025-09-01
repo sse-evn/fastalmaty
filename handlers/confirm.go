@@ -1,58 +1,30 @@
-// handlers/confirm.go
+// // // handlers/confirm.go
 
 package handlers
 
-import (
-	"database/sql"
-	"fastalmaty/db"
-	"net/http"
+// import (
+// 	"fastalmaty/db"
+// 	"net/http"
 
-	"github.com/gin-gonic/gin"
-)
+// 	"github.com/gin-gonic/gin"
+// )
 
-// ConfirmOrderHandler — подтверждает получение заказа курьером
-func ConfirmOrderHandler(c *gin.Context) {
-	orderID := c.Param("id") // ✅ Оставляем как строку
+// // import (
+// // 	"database/sql"
+// // 	"fastalmaty/db"
+// // 	"net/http"
 
-	// Получаем user_id из контекста
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Неавторизован"})
-		return
-	}
+// // 	"github.com/gin-gonic/gin"
+// // )
 
-	courierID, ok := userID.(int)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверный ID пользователя"})
-		return
-	}
+// func ConfirmOrderHandler(c *gin.Context) {
+// 	orderID := c.Param("id")
 
-	var status string
-	err := db.DB.QueryRow("SELECT status FROM orders WHERE id = ?", orderID).Scan(&status)
-	if err == sql.ErrNoRows {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Заказ не найден"})
-		return
-	} else if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
-		return
-	}
+// 	_, err := db.DB.Exec("UPDATE orders SET status = 'completed' WHERE id = ?", orderID)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка подтверждения заказа"})
+// 		return
+// 	}
 
-	if status != "progress" && status != "new" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Заказ нельзя подтвердить"})
-		return
-	}
-
-	// Обновляем статус и courier_id
-	_, err = db.DB.Exec(`
-		UPDATE orders 
-		SET status = 'completed', 
-		    courier_id = ?, 
-		    completed_at = datetime('now') 
-		WHERE id = ?`, courierID, orderID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось обновить заказ"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Заказ успешно подтверждён", "id": orderID})
-}
+// 	c.JSON(http.StatusOK, gin.H{"message": "Заказ доставлен"})
+// }
