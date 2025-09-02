@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Подтвердить получение</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #f5f7fa;
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 400px;
+        }
+        h1 { color: #10b981; }
+        p { margin: 15px 0; color: #666; }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            background: #10b981;
+            color: white;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ Подтверждение получения</h1>
+        <p>Вы получили заказ?</p>
+        <button class="btn" onclick="confirmDelivery()">Да, подтверждаю</button>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order');
+
+        if (!orderId) {
+            document.querySelector('.container').innerHTML = '<h1>❌ Ошибка</h1><p>Не указан номер заказа</p>';
+        }
+
+        async function confirmDelivery() {
+            try {
+                const response = await fetch(`/api/order/${orderId}/confirm`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'accept' })
+                });
+
+                if (response.ok) {
+                    document.querySelector('.container').innerHTML = '<h1>✅ Успешно!</h1><p>Заказ подтверждён. Спасибо!</p>';
+                } else {
+                    const data = await response.json();
+                    document.querySelector('.container').innerHTML = `<h1>❌ Ошибка</h1><p>${data.error || 'Не удалось подтвердить'}</p>`;
+                }
+            } catch (err) {
+                document.querySelector('.container').innerHTML = '<h1>❌ Ошибка</h1><p>Нет связи с сервером</p>';
+            }
+        }
+    </script>
+</body>
+</html>

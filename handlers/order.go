@@ -202,68 +202,48 @@ func CourierOrdersHandler(c *gin.Context) {
 	var args []interface{}
 
 	if userRole == "courier" {
-		query = `
-            SELECT id, receiver_name, receiver_address, status, 
-                   created_at, weight_kg, delivery_cost_tenge 
-            FROM orders 
-            WHERE courier_id = ? AND status IN ('assigned', 'in_progress', 'progress')
-        `
+		query = `SELECT id, receiver_name, receiver_address, status, created_at, weight_kg, delivery_cost_tenge
+                  FROM orders
+                  WHERE courier_id = ? AND status = 'progress'`
 		args = append(args, userID)
 	} else {
-		query = `
-            SELECT id, receiver_name, receiver_address, status, 
-                   created_at, weight_kg, delivery_cost_tenge 
-            FROM orders 
-            WHERE status IN ('new', 'assigned', 'in_progress', 'progress')
-        `
+		query = `SELECT id, receiver_name, receiver_address, status, created_at, weight_kg, delivery_cost_tenge
+                  FROM orders
+                  WHERE status IN ('new', 'progress')`
 	}
 
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"orders": []interface{}{}})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
 		return
 	}
 	defer rows.Close()
 
 	var orders []gin.H
 	for rows.Next() {
-		var id, receiverName, receiverAddress, status, createdAt string
-		var weightKg, deliveryCostTenge float64
-		var statusNull, createdAtNull sql.NullString
-		var weightNull, costNull sql.NullFloat64
+		var id, receiverName, receiverAddress, status, createdAt sql.NullString
+		var weightKg, deliveryCostTenge sql.NullFloat64
 
-		err := rows.Scan(&id, &receiverName, &receiverAddress, &statusNull,
-			&createdAtNull, &weightNull, &costNull)
+		err := rows.Scan(&id, &receiverName, &receiverAddress, &status, &createdAt, &weightKg, &deliveryCostTenge)
 		if err != nil {
-			continue
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка чтения данных заказа"})
+			return
 		}
 
-		if statusNull.Valid {
-			status = statusNull.String
+		orderData := gin.H{
+			"id":                  id.String,
+			"receiver_name":       receiverName.String,
+			"receiver_address":    receiverAddress.String,
+			"status":              status.String,
+			"created_at":          createdAt.String,
+			"weight_kg":           weightKg.Float64,
+			"delivery_cost_tenge": deliveryCostTenge.Float64,
 		}
-		if createdAtNull.Valid {
-			createdAt = createdAtNull.String
-		}
-		if weightNull.Valid {
-			weightKg = weightNull.Float64
-		}
-		if costNull.Valid {
-			deliveryCostTenge = costNull.Float64
-		}
-
-		orders = append(orders, gin.H{
-			"id":                  id,
-			"receiver_name":       receiverName,
-			"receiver_address":    receiverAddress,
-			"status":              status,
-			"created_at":          createdAt,
-			"weight_kg":           weightKg,
-			"delivery_cost_tenge": deliveryCostTenge,
-		})
+		orders = append(orders, orderData)
 	}
 
-	if len(orders) == 0 {
-		c.JSON(http.StatusOK, gin.H{"orders": []interface{}{}})
+	if err = rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при итерации по заказам"})
 		return
 	}
 
@@ -313,4 +293,50 @@ func ChangeOrderStatusHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Статус изменен"})
+}
+func DeliverOrderByQRHandler(c *gin.Context) {
+	// Получить ID заказа, например, из параметров URL или тела запроса
+	// orderId := c.Param("id") // Если будет /api/order/:id/deliver-by-qr
+	var request struct {
+		OrderID string `json:"order_id"` // Если будет POST /api/order/deliver-by-qr с JSON { "order_id": "..." }
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный запрос"})
+		return
+	}
+	orderId := request.OrderID
+
+	if orderId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID заказа не указан"})
+		return
+	}
+
+	// Проверка существования заказа и его статуса
+	var currentStatus string
+	err := db.DB.QueryRow("SELECT status FROM orders WHERE id = ?", orderId).Scan(&currentStatus)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Заказ не найден"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка базы данных"})
+		}
+		return
+	}
+
+	// Проверка, можно ли завершить заказ этим способом (пример: только если он "in_progress")
+	if currentStatus != "progress" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Заказ не находится в статусе 'В пути'"})
+		return
+	}
+
+	// Обновить статус заказа на "completed"
+	_, err = db.DB.Exec("UPDATE orders SET status = 'completed' WHERE id = ?", orderId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка обновления статуса заказа"})
+		return
+	}
+
+	// Отправка уведомлений (опционально)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Заказ успешно доставлен"})
 }
