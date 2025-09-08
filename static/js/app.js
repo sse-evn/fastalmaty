@@ -1046,3 +1046,111 @@ function addQrToOrderDetails(orderId) {
         </div>
     `;
 }
+async function loadKaspiOrders() {
+    showNotification('Загружаем заказы из Kaspi...', 'info');
+
+    const selectedState = document.getElementById('kaspi-status-filter').value;
+    const token = getKaspiAuthToken(); // Реализуйте эту функцию для получения токена (например, из localStorage или настроек)
+
+    if (!token) {
+        showNotification('Токен Kaspi не настроен. Перейдите в Настройки.', 'error');
+        return;
+    }
+
+    const url = `https://kaspi.kz/shop/api/v2/orders?page[number]=0&page[size]=50&filter[orders][state]=${selectedState}&include[orders]=user`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/vnd.api+json',
+                'X-Auth-Token': token
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Ошибка API Kaspi: ${response.status}`);
+        }
+
+        const data = await response.json();
+        renderKaspiOrders(data.data);
+        showNotification(`Загружено ${data.data.length} заказов.`, 'success');
+    } catch (error) {
+        console.error('Ошибка при загрузке заказов Kaspi:', error);
+        showNotification('Не удалось загрузить заказы: ' + error.message, 'error');
+    }
+}
+
+// Функция для отображения заказов в таблице
+function renderKaspiOrders(orders) {
+    const tableBody = document.getElementById('kaspi-orders-list');
+    tableBody.innerHTML = '';
+
+    if (orders.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #777;">Заказы не найдены</td></tr>`;
+        return;
+    }
+
+    orders.forEach(order => {
+        const row = document.createElement('tr');
+
+        // Форматируем дату создания
+        const creationDate = new Date(order.attributes.creationDate).toLocaleString('ru-RU');
+
+        row.innerHTML = `
+            <td>${order.attributes.code}</td>
+            <td>${order.attributes.customer.firstName} ${order.attributes.customer.lastName}<br><small>${order.attributes.customer.cellPhone}</small></td>
+            <td>${order.attributes.deliveryAddress || 'Самовывоз'}</td>
+            <td><span class="badge badge-info">${order.attributes.state}</span></td>
+            <td><span class="badge badge-warning">${order.attributes.status}</span></td>
+            <td>${order.attributes.totalPrice.toLocaleString()} ₸</td>
+            <td>
+                <button class="btn btn-sm btn-success" onclick="importKaspiOrder('${order.id}')">
+                    <i class="fas fa-plus"></i> Импорт
+                </button>
+                <a href="${order.attributes.waybill}" target="_blank" class="btn btn-sm btn-info" title="Скачать накладную">
+                    <i class="fas fa-print"></i>
+                </a>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+// Функция для импорта одного заказа в FastAlmaty
+function importKaspiOrder(kaspiOrderId) {
+    showNotification('Импорт заказа в разработке...', 'info');
+    // Здесь должна быть логика:
+    // 1. Получить полные данные заказа по ID (если нужно).
+    // 2. Создать новый объект заказа в формате FastAlmaty.
+    // 3. Отправить POST-запрос на ваш внутренний API для создания заказа.
+    // 4. Показать уведомление об успехе/ошибке.
+}
+
+// Функция для массовой синхронизации
+function syncAllToFastAlmaty() {
+    showNotification('Массовая синхронизация в разработке...', 'info');
+    // Логика: пройтись по всем строкам таблицы и вызвать importKaspiOrder для каждого.
+}
+
+// Вспомогательная функция для показа уведомлений
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+}
+
+// Заглушка для получения токена
+function getKaspiAuthToken() {
+    // В реальности, токен должен храниться в настройках (вкладка Settings)
+    // Например, вы можете добавить поле в settings-grid:
+    // <input type="text" class="form-input" id="setting-kaspi_api_token" placeholder="X-Auth-Token от Kaspi">
+    // И затем вернуть его значение оттуда.
+    return localStorage.getItem('kaspi_api_token') || 'YOUR_TEMP_TOKEN_HERE';
+}

@@ -2,96 +2,528 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход в FastAlmaty</title>
     <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+            --hover: rgba(255, 255, 255, 0.08);
+            --accent: #8b5cf6;
+            --telegram: #0088cc;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
         body {
-            font-family: 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #1a2a6c, #b21f1f);
             color: white;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            min-height: 100vh;
+            padding: 16px;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.5;
         }
+        
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+        
         .login-box {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 16px;
-            width: 320px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(16px);
+            padding: 24px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
         }
-        .login-title {
-            font-size: 28px;
+        
+        .login-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
+        
+        .logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
             margin-bottom: 24px;
+            flex-direction: column;
+            text-align: center;
         }
+        
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-top: 8px;
+        }
+        
+        .company-subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+        
+        .login-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: white;
+        }
+        
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
             text-align: left;
         }
+        
         .form-group label {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
+            font-weight: 500;
             font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
         }
+        
         .form-input {
             width: 100%;
-            padding: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
             color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            -webkit-appearance: none;
+            min-height: 50px;
         }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+        }
+        
         .form-input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255, 255, 255, 0.5);
         }
+        
         .btn {
             width: 100%;
-            padding: 12px;
-            background: #27ae60;
+            padding: 16px;
+            background: linear-gradient(45deg, var(--success), #059669);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.3s ease;
             margin-top: 10px;
+            min-height: 50px;
+        }
+        
+        .btn:hover, .btn:active {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
+        }
+        
+        .security-notice {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+        
+        .security-icon {
+            color: var(--success);
+            margin-right: 5px;
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            color: white;
+            z-index: 3000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            font-size: 14px;
+            display: none;
+            text-align: center;
+        }
+        
+        .notification-error {
+            background: var(--danger);
+        }
+        
+        /* Специальные стили для мобильных устройств */
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+                align-items: flex-start;
+                padding-top: 40px;
+            }
+            
+            .login-container {
+                max-width: 100%;
+            }
+            
+            .login-box {
+                padding: 20px 16px;
+                border-radius: 16px;
+            }
+            
+            .logo-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 24px;
+            }
+            
+            .company-name {
+                font-size: 22px;
+            }
+            
+            .login-title {
+                font-size: 22px;
+                margin-bottom: 20px;
+            }
+            
+            .form-input {
+                padding: 14px;
+                font-size: 16px; /* Увеличиваем для удобства на мобильных */
+            }
+            
+            .btn {
+                padding: 15px;
+                font-size: 16px;
+            }
+            
+            .notification {
+                right: 16px;
+                left: 16px;
+                bottom: 16px;
+            }
+        }
+        
+        @media (max-width: 350px) {
+            .logo-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 20px;
+            }
+            
+            .company-name {
+                font-size: 20px;
+            }
+            
+            .login-title {
+                font-size: 20px;
+            }
+            
+            .form-input, .btn {
+                min-height: 44px;
+            }
+        }
+        
+        /* Улучшения для очень высоких экранов */
+        @media (min-height: 800px) {
+            body {
+                align-items: center;
+                padding-top: 20px;
+            }
+        }
+        
+        /* Портретная и ландшафтная ориентация */
+        @media (max-height: 500px) and (orientation: landscape) {
+            body {
+                align-items: flex-start;
+                padding: 10px;
+            }
+            
+            .login-container {
+                max-width: 100%;
+            }
+            
+            .login-box {
+                padding: 16px;
+            }
+            
+            .logo {
+                flex-direction: row;
+                margin-bottom: 16px;
+            }
+            
+            .logo-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+            
+            .company-name {
+                font-size: 18px;
+                margin-top: 0;
+            }
+            
+            .company-subtitle {
+                font-size: 12px;
+            }
+            
+            .login-title {
+                font-size: 20px;
+                margin-bottom: 16px;
+            }
+            
+            .form-group {
+                margin-bottom: 12px;
+            }
+        }
+        
+        /* Улучшения для iOS */
+        @supports (-webkit-touch-callout: none) {
+            .form-input, .btn {
+                min-height: 44px; /* Минимальная высота для удобного касания на iOS */
+            }
         }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <h2 class="login-title">Вход</h2>
-        <form id="login-form">
-            <div class="form-group">
-                <label>Логин</label>
-                <input type="text" class="form-input" id="username" required>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo">
+                <div class="logo-icon">F</div>
+                <div>
+                    <div class="company-name">FastAlmaty</div>
+                    <div class="company-subtitle">Быстрые доставки</div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Пароль</label>
-                <input type="password" class="form-input" id="password" required>
-            </div>
-            <button type="submit" class="btn">Войти</button>
-        </form>
+            
+            <h2 class="login-title">Вход в систему</h2>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Логин</label>
+                    <input 
+                        type="text" 
+                        class="form-input" 
+                        id="username" 
+                        placeholder="Введите ваш логин"
+                        required
+                        autocomplete="username"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <input 
+                        type="password" 
+                        class="form-input" 
+                        id="password" 
+                        placeholder="Введите ваш пароль"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+                
+                <button type="submit" class="btn">Войти в систему</button>
+            </form>
+            
+          
+        </div>
     </div>
+    
+    <div class="notification notification-error" id="error-notification"></div>
+
     <script>
+        // Показываем уведомление о безопасности при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            const securityNotice = document.getElementById('security-notice');
+            securityNotice.style.display = 'block';
+            
+            // Скрываем через 5 секунд
+            setTimeout(() => {
+                securityNotice.style.display = 'none';
+            }, 5000);
+        });
+        
+        // Функция для очистки входных данных от потенциально опасных символов
+        function sanitizeInput(input) {
+            if (typeof input !== 'string') return input;
+            
+            // Удаляем потенциально опасные символы для SQL-инъекций
+            const dangerousSymbols = /['";\\\-\-]/g;
+            let cleaned = input.replace(dangerousSymbols, '');
+            
+            // Защита от XSS - экранируем HTML символы
+            cleaned = cleaned.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            return cleaned.trim();
+        }
+        
+        // Функция для показа уведомлений об ошибках
+        function showError(message) {
+            const notification = document.getElementById('error-notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            
+            // Плавное появление
+            setTimeout(() => {
+                notification.style.opacity = '1';
+            }, 10);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                    notification.style.opacity = '1';
+                }, 300);
+            }, 5000);
+        }
+        
+        // Обработка отправки формы
         document.getElementById('login-form').onsubmit = async (e) => {
             e.preventDefault();
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: document.getElementById('username').value,
-                    password: document.getElementById('password').value
-                })
-            });
-            if (res.ok) {
-                window.location.href = '/';
-            } else {
-                alert('Ошибка входа');
+            
+            // Очищаем предыдущие ошибки
+            document.getElementById('error-notification').style.display = 'none';
+            
+            // Получаем и очищаем значения полей
+            const username = sanitizeInput(document.getElementById('username').value);
+            const password = sanitizeInput(document.getElementById('password').value);
+            
+            // Проверяем, что поля не пустые после очистки
+            if (!username || !password) {
+                showError('Логин и пароль не могут содержать специальные символы');
+                return false;
+            }
+            
+            // Дополнительные проверки
+            if (username.length < 3 || username.length > 20) {
+                showError('Логин должен быть от 3 до 20 символов');
+                return false;
+            }
+            
+            if (password.length < 6) {
+                showError('Пароль должен содержать не менее 6 символов');
+                return false;
+            }
+            
+            try {
+                // Отправляем запрос на сервер
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    // Перенаправляем на главную страницу после успешного входа
+                    window.location.href = data.redirect || '/';
+                } else {
+                    // Показываем ошибку от сервера
+                    showError(data.message || 'Ошибка входа. Проверьте логин и пароль.');
+                }
+            } catch (error) {
+                console.error('Ошибка при входе:', error);
+                showError('Ошибка соединения с сервером');
             }
         };
+        
+        // Защита от вставки потенциально опасного контента
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                // Очищаем ввод в реальном времени
+                this.value = sanitizeInput(this.value);
+            });
+            
+            input.addEventListener('paste', function(e) {
+                // Обрабатываем вставку из буфера обмена
+                const pastedText = e.clipboardData.getData('text');
+                const cleanedText = sanitizeInput(pastedText);
+                
+                // Если текст изменился после очистки, предотвращаем стандартную вставку
+                if (pastedText !== cleanedText) {
+                    e.preventDefault();
+                    
+                    // Вставляем очищенный текст
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + cleanedText + this.value.substring(end);
+                    
+                    // Устанавливаем курсор на правильную позицию
+                    this.selectionStart = this.selectionEnd = start + cleanedText.length;
+                    
+                    // Показываем предупреждение
+                    showError('Удалены потенциально опасные символы');
+                }
+            });
+        });
+        
+        // Улучшение для мобильных устройств - предотвращение масштабирования при фокусе
+        document.addEventListener('DOMContentLoaded', function() {
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                let viewport = document.querySelector('meta[name="viewport"]');
+                if (viewport) {
+                    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0');
+                }
+            }
+        });
     </script>
 </body>
 </html>
