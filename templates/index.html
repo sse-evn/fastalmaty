@@ -711,6 +711,136 @@
                 font-size: 22px;
             }
         }
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            background: #f1f5f9;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: white;
+            color: var(--primary);
+            font-weight: 600;
+            box-shadow: 0 -2px 0 var(--primary) inset;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .order-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .form-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .form-col {
+            flex: 1;
+            min-width: 280px;
+        }
+        .form-col.full {
+            flex: 100%;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #334155;
+        }
+        .form-label.required::after {
+            content: " *";
+            color: var(--danger);
+        }
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .input-group .form-input {
+            flex: 1;
+        }
+        .order-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        .order-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .order-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .badge-kaspi {
+            background: #fbbf24;
+            color: #7c2d12;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .order-card-body p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #475569;
+        }
+        .order-card-footer {
+            margin-top: 16px;
+            text-align: right;
+        }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .alert-info {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border: 1px solid #93c5fd;
+        }
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .btn-outline {
+            background: #f1f5f9;
+            color: #475569;
+        }
+        .btn-outline:hover {
+            background: #e2e8f0;
+        }
     </style>
 </head>
 <body>
@@ -855,61 +985,158 @@
             </div>
             <div id="new-order" class="page">
                 <div class="page-header">
-                    <h1 class="page-title">➕ Новый заказ</h1>
-                    <button class="btn btn-primary" onclick="showPage('dashboard')">
-                        <i class="fas fa-arrow-left"></i> Назад
-                    </button>
+                    <h1 class="page-title">➕ Создать заказ</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="showPage('dashboard')">
+                            <i class="fas fa-arrow-left"></i> Отмена
+                        </button>
+                        <button class="btn btn-primary" onclick="submitFastOrder()">
+                            <i class="fas fa-paper-plane"></i> Отправить
+                        </button>
+                    </div>
                 </div>
                 <div class="fast-order-panel">
-                    <div class="fast-order-title">⚡ Быстрое создание заказа</div>
-                    <form id="fast-order-form">
-                        <div class="fast-form-grid">
-                             <div class="form-group">
-                                <label>👤 Отправитель</label>
-                                <input type="text" class="form-input" placeholder="Имя отправителя" id="sender-name" />
-                                <input type="tel" class="form-input" placeholder="Телефон отправителя" id="sender-phone" />
-                                <textarea class="form-input" placeholder="Адрес забора" id="sender-address" rows="2"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label>👥 Получатель <span style="color: red;">*</span></label>
-                                <input type="text" class="form-input" placeholder="Имя получателя" id="receiver-name" required />
-                                <input type="tel" class="form-input" placeholder="Телефон получателя" id="receiver-phone" required />
-                                <textarea class="form-input" placeholder="Адрес доставки" id="receiver-address" rows="2" required></textarea>
-                            </div>
-                        </div>
-                        <div class="fast-form-grid">
-                            <div class="form-group">
-                                <label>📦 Товар <span style="color: red;">*</span></label>
-                                <input type="text" class="form-input" placeholder="Описание товара" id="product-desc" required />
-                                <div class="grid-2cols">
-                                    <input type="number" class="form-input" placeholder="Вес (кг)" id="weight" step="0.01" min="0" />
-                                    <input type="number" class="form-input" placeholder="Объем (л)" id="volume" step="0.01" min="0" />
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="manual">Ручной ввод</button>
+                        <button class="tab-btn" data-tab="kaspi">Из Kaspi</button>
+                        <button class="tab-btn" data-tab="courier">Для курьера</button>
+                    </div>
+                    <div class="tab-content active" id="tab-manual">
+                        <form id="fast-order-form" class="order-form">
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label class="form-label">👤 От кого</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-input" placeholder="Имя отправителя" id="sender-name" />
+                                        <input type="tel" class="form-input" placeholder="Телефон" id="sender-phone" />
+                                    </div>
+                                    <textarea class="form-input" placeholder="Адрес забора" id="sender-address" rows="3"></textarea>
+                                </div>
+                                <div class="form-col">
+                                    <label class="form-label required">👥 Получатель</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-input" placeholder="Имя получателя" id="receiver-name" required />
+                                        <input type="tel" class="form-input" placeholder="Телефон получателя" id="receiver-phone" required />
+                                    </div>
+                                    <textarea class="form-input" placeholder="Адрес доставки" id="receiver-address" rows="3" required></textarea>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label>💳 Оплата</label>
-                                <select class="form-select" id="payment-method">
-                                    <option value="cash">Наличные</option>
-                                    <option value="card">Карта</option>
-                                    <option value="online">Онлайн</option>
-                                </select>
-                                <input type="number" class="form-input" placeholder="Стоимость доставки (₸)" id="delivery-cost" value="500" min="0"/>
-                                <input type="number" class="form-input" placeholder="Стоимость товара (₸)" id="product-cost" min="0"/>
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label class="form-label required">📦 Товар</label>
+                                    <input type="text" class="form-input" placeholder="Название товара" id="product-desc" required />
+                                    <div class="grid-2cols">
+                                        <input type="number" class="form-input" placeholder="Вес (кг)" id="weight" step="0.01" min="0" value="1.00" />
+                                        <input type="number" class="form-input" placeholder="Объем (л)" id="volume" step="0.01" min="0" value="5.00" />
+                                    </div>
+                                </div>
+                                <div class="form-col">
+                                    <label class="form-label">💰 Оплата и стоимость</label>
+                                    <select class="form-select" id="payment-method">
+                                        <option value="cash">Наличные</option>
+                                        <option value="card">Карта</option>
+                                        <option value="online">Онлайн</option>
+                                        <option value="kaspi">Kaspi Pay</option>
+                                    </select>
+                                    <div class="grid-2cols">
+                                        <input type="number" class="form-input" placeholder="Доставка (₸)" id="delivery-cost" value="500" min="0"/>
+                                        <input type="number" class="form-input" placeholder="Товар (₸)" id="product-cost" min="0"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-col full">
+                                    <label class="form-label">📝 Комментарий / Инструкции</label>
+                                    <textarea class="form-input" placeholder="Например: 'Звонить за 30 мин', 'Подъезд 3, код 1234'" id="order-comment" rows="3"></textarea>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline" onclick="resetForm()">
+                                    <i class="fas fa-eraser"></i> Очистить
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="submitFastOrder()">
+                                    <i class="fas fa-check-circle"></i> Создать заказ
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-content" id="tab-kaspi">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Выберите заказ из списка ниже или введите ID вручную.
+                        </div>
+                        <div class="input-with-buttons">
+                            <input type="text" class="form-input" placeholder="ID заказа Kaspi" id="kaspi-order-id" />
+                            <button class="btn btn-primary" onclick="importKaspiOrderById()"><i class="fas fa-search"></i> Найти</button>
+                        </div>
+                        <div class="orders-section" style="margin-top: 20px;">
+                            <h3>Последние заказы из Kaspi</h3>
+                            <div id="kaspi-orders-preview" class="order-cards">
+                                <div class="order-card">
+                                    <div class="order-card-header">
+                                        <span class="badge badge-kaspi">Kaspi #KZ-887766</span>
+                                        <span class="status-badge status-new">Новый</span>
+                                    </div>
+                                    <div class="order-card-body">
+                                        <p><strong>Получатель:</strong> Алия С.</p>
+                                        <p><strong>Адрес:</strong> ул. Абая 12, кв. 45</p>
+                                        <p><strong>Товар:</strong> iPhone 15 Pro</p>
+                                        <p><strong>Сумма:</strong> 350 000 ₸</p>
+                                    </div>
+                                    <div class="order-card-footer">
+                                        <button class="btn btn-sm btn-success" onclick="importThisKaspiOrder('KZ-887766')">
+                                            <i class="fas fa-plus"></i> Импортировать
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                         <div class="form-group">
-                            <label>📝 Комментарий</label>
-                            <textarea class="form-input" placeholder="Дополнительная информация" id="order-comment" rows="2"></textarea>
+                    </div>
+                    <div class="tab-content" id="tab-courier">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Этот заказ будет назначен напрямую курьеру. Укажите детали.
                         </div>
-                        <div class="action-row">
-                            <button type="button" class="btn btn-warning btn-sm" onclick="resetForm()">
-                                <i class="fas fa-trash-alt"></i> Очистить
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-check"></i> Создать
-                            </button>
-                        </div>
-                    </form>
+                        <form class="order-form">
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label class="form-label">👤 Курьер</label>
+                                    <select class="form-select" id="assigned-courier">
+                                        <option value="">Выберите курьера</option>
+                                        <option value="1">Азамат К.</option>
+                                        <option value="2">Данияр Т.</option>
+                                        <option value="3">Жанар Б.</option>
+                                    </select>
+                                </div>
+                                <div class="form-col">
+                                    <label class="form-label">⏱️ Срочность</label>
+                                    <select class="form-select" id="courier-urgency">
+                                        <option value="normal">Обычный (2-4 часа)</option>
+                                        <option value="urgent">Срочный (1 час)</option>
+                                        <option value="asap">Как можно скорее</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-col full">
+                                    <label class="form-label">📍 Адрес доставки</label>
+                                    <textarea class="form-input" placeholder="Полный адрес с подъездом и этажом" id="courier-address" rows="3" required></textarea>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label class="form-label">📦 Описание</label>
+                                    <input type="text" class="form-input" placeholder="Что везем?" id="courier-product-desc" />
+                                </div>
+                                <div class="form-col">
+                                    <label class="form-label">💰 Стоимость</label>
+                                    <input type="number" class="form-input" placeholder="Сумма к получению" id="courier-collect-amount" min="0" />
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline">Очистить</button>
+                                <button type="button" class="btn btn-success"><i class="fas fa-bicycle"></i> Назначить курьеру</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
             <div id="orders" class="page">
@@ -1302,7 +1529,6 @@
             }
             page.classList.add('active');
             onPageLoad(pageId);
-            // Скрываем меню на мобилке после выбора пункта
             if (window.innerWidth <= 768) {
                 document.querySelector('.sidebar').classList.remove('active');
             }
@@ -1581,22 +1807,22 @@
                                 <td>${formatDate(o.created_at)}</td>
                                 <td>
                                     ${o.status === 'progress' ? 
-                                        `<button class="btn btn-success btn-sm" onclick="confirmOrder('${o.id}')">Доставлен</button>` : 
+                                        `<div style="display: flex; flex-direction: column; gap: 5px;">
+                                            <button class="btn btn-success btn-sm" onclick="openQrScanner()" title="Сканировать QR для подтверждения">Подтвердить</button>
+                                            ${addQrToOrderDetails(o.id)}
+                                        </div>` : 
                                         `<span>${getStatusText(o.status)}</span>`
                                     }
                                 </td>
                             </tr>
                         `;
-                        if (o.status === 'progress') {
-                             rowsHtml += `<tr><td colspan="6">${addQrToOrderDetails(o.id)}</td></tr>`;
-                        }
                     });
                     tbody.innerHTML = rowsHtml;
                 }
                 addQrButtonToCourierUI();
             } catch (err) {
                 console.error('Ошибка загрузки заказов курьера:', err);
-                showNotification('Ошибка загрузки заказов курьера', 'error');
+                showNotification('Ошибка загрузки заказов курьера: ' + err.message, 'error');
             }
         }
         async function takeOrder(orderId) {
@@ -1907,6 +2133,15 @@
             const toggleBtn = document.getElementById('toggleSidebar');
             toggleBtn.addEventListener('click', () => {
                 document.querySelector('.sidebar').classList.toggle('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    btn.classList.add('active');
+                    const tabId = btn.getAttribute('data-tab');
+                    document.getElementById(`tab-${tabId}`).classList.add('active');
+                });
             });
         });
         async function loadAdminPanel() {
@@ -2286,6 +2521,17 @@
         }
         function getKaspiAuthToken() {
             return document.getElementById('setting-kaspi_api_token').value || localStorage.getItem('kaspi_api_token') || '';
+        }
+        function importKaspiOrderById() {
+            const orderId = document.getElementById('kaspi-order-id').value.trim();
+            if (!orderId) {
+                showNotification('Введите ID заказа', 'error');
+                return;
+            }
+            showNotification('Поиск заказа в разработке...', 'info');
+        }
+        function importThisKaspiOrder(orderId) {
+            showNotification('Импорт заказа ' + orderId + ' в разработке...', 'info');
         }
     </script>
 </body>
