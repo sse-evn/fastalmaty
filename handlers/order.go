@@ -295,23 +295,18 @@ func ChangeOrderStatusHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Статус изменен"})
 }
 func DeliverOrderByQRHandler(c *gin.Context) {
-	// Получить ID заказа, например, из параметров URL или тела запроса
-	// orderId := c.Param("id") // Если будет /api/order/:id/deliver-by-qr
 	var request struct {
-		OrderID string `json:"order_id"` // Если будет POST /api/order/deliver-by-qr с JSON { "order_id": "..." }
+		OrderID string `json:"order_id"`
 	}
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный запрос"})
 		return
 	}
 	orderId := request.OrderID
-
 	if orderId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID заказа не указан"})
 		return
 	}
-
-	// Проверка существования заказа и его статуса
 	var currentStatus string
 	err := db.DB.QueryRow("SELECT status FROM orders WHERE id = ?", orderId).Scan(&currentStatus)
 	if err != nil {
@@ -322,21 +317,14 @@ func DeliverOrderByQRHandler(c *gin.Context) {
 		}
 		return
 	}
-
-	// Проверка, можно ли завершить заказ этим способом (пример: только если он "in_progress")
 	if currentStatus != "progress" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Заказ не находится в статусе 'В пути'"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Заказ не в статусе 'В пути'"})
 		return
 	}
-
-	// Обновить статус заказа на "completed"
 	_, err = db.DB.Exec("UPDATE orders SET status = 'completed' WHERE id = ?", orderId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка обновления статуса заказа"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка обновления статуса"})
 		return
 	}
-
-	// Отправка уведомлений (опционально)
-
-	c.JSON(http.StatusOK, gin.H{"message": "Заказ успешно доставлен"})
+	c.JSON(http.StatusOK, gin.H{"message": "✅ Заказ доставлен"})
 }

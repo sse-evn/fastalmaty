@@ -18,4 +18,7 @@ type Order struct {
 	Status            string  `json:"status"`
 	CreatedAt         string  `json:"created_at"`
 	StatusText        string  `json:"status_text"`
+	QrUrl             string  `json:"qr_url,omitempty"`      // URL или base64 QR-кода
+	BarcodeUrl        string  `json:"barcode_url,omitempty"` // URL или base64 Штрихкода
+
 }

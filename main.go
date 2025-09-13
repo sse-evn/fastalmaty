@@ -97,7 +97,7 @@ func main() {
 		api.GET("/logout", middleware.AuthRequired(), handlers.LogoutHandler)
 		api.GET("/stats", middleware.AuthRequired(), handlers.StatsHandler)
 		api.GET("/orders", middleware.AuthRequired(), handlers.GetOrdersHandler)
-		api.POST("/order/deliver-by-qr", handlers.DeliverOrderByQRHandler)
+		// api.POST("/order/deliver-by-qr", handlers.DeliverOrderByQRHandler) // Удалено, функционал перенесен в /order/scan-qr
 		api.POST("/orders", func(c *gin.Context) {
 			if c.GetHeader("Authorization") != "" {
 				middleware.ApiKeyAuth()(c)
@@ -108,6 +108,14 @@ func main() {
 				middleware.AuthRequired()(c)
 			}
 		}, handlers.CreateOrderHandler)
+
+		// === Добавленные маршруты для сканеров ===
+		// Сканирование штрих-кода (на складе, меняет статус с "new" на "progress")
+		api.POST("/order/scan-barcode", middleware.AuthRequired(), handlers.ScanBarcodeHandler)
+
+		// Сканирование QR-кода (меняет статус, учитывает роль и предыдущий статус)
+		api.POST("/order/scan-qr", middleware.AuthRequired(), handlers.HandleQRScan)
+		// ================================
 
 		api.GET("/courier/orders",
 			middleware.AuthRequired(),
@@ -140,7 +148,6 @@ func main() {
 			middleware.AuthRequired(),
 			middleware.RoleRequired("admin", "manager", "courier"),
 			handlers.TakeOrderHandler)
-
 		api.POST("/orders/bulk",
 			middleware.AuthRequired(),
 			handlers.BulkUploadHandler)
